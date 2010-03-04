@@ -390,6 +390,17 @@ class MiCache extends Object {
 	}
 
 /**
+ * exec method
+ *
+ * @param mixed $cmd
+ * @param mixed $out null
+ * @return void
+ * @access protected
+ */
+	static protected function _exec($cmd, &$out = null) {
+		return Mi::exec($cmd, $out);
+	}
+/**
  * createDir method
  *
  * @param mixed $path
@@ -560,10 +571,19 @@ class MiFileEngine extends FileEngine {
 			return;
 		}
 
-		exec("find $dir -type f ! -iwholename \"*.svn*\" ! -name \"empty\" -exec rm -f {} \; && find $dir -type d -empty -print0 | xargs -0 rmdir", $_, $returnVar);
-		if (!$returnVar) {
-			return;
-		}
+		return MiFileEngine::_exec("find $dir -type f ! -iwholename \"*.svn*\" ! -name \"empty\" -exec rm -f {} \; && find $dir -type d -empty -print0 | xargs -0 rmdir");
+	}
+
+/**
+ * exec method
+ *
+ * @param mixed $cmd
+ * @param mixed $out null
+ * @return void
+ * @access protected
+ */
+	static protected function _exec($cmd, &$out = null) {
+		return Mi::exec($cmd, $out);
 	}
 
 /**

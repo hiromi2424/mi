@@ -486,7 +486,7 @@ class MiDbShell extends Shell {
 			$this->out($command);
 		}
 		if (!empty($settings['return'])) {
-			exec($command, $return);
+			$this->_exec($command, $return);
 			return $return;
 		}
 		if (empty($settings['toFile'])) {
@@ -496,6 +496,18 @@ class MiDbShell extends Shell {
 			$command .= ' > ' . escapeshellarg($settings['toFile']);
 			`$command`;
 		}
+	}
+
+/**
+ * exec method
+ *
+ * @param mixed $cmd
+ * @param mixed $out null
+ * @return void
+ * @access protected
+ */
+	protected function _exec($cmd, &$out = null) {
+		return Mi::exec($cmd, $out);
 	}
 
 /**

@@ -252,7 +252,8 @@ class MiInstall extends Object {
 		} else {
 			$details = MiInstall::details($id);
 		}
-		$return = array(true, array());
+		$return = true;
+		$out = array();
 		if ($details['Type'] !== 'virtual') {
 			$target = $params['base'] . DS . Inflector::pluralize($details['Type']) . DS . $details['Package'];
 			if (strpos($details['Source'], 'svn') !== false) {
@@ -263,16 +264,17 @@ class MiInstall extends Object {
 			if (empty($cmd)) {
 				return false;
 			}
-			$return = MiInstall::_system($cmd);
-			if ($return[0]) {
+			$return = MiInstall::_exec($cmd, $out);
+			if (!$return) {
 				return false;
 			}
 			if (!empty($details['PostInstallScript'])) {
-				$return = am($return, MiInstall::_system('cd ' . $target . ' && ' . $details['PostInstallScript']));
+				MiInstall::_exec('cd ' . $target . ' && ' . $details['PostInstallScript'], $_out);
+				$out = array_merge($out, $_out);
 			}
 		}
 		if (empty($details['Depends'])) {
-			return $return;
+			return array($return, $out);
 		}
 		$plugins = MiInstall::plugins();
 		$vendors = MiInstall::vendors();
@@ -284,13 +286,13 @@ class MiInstall extends Object {
 			$details = MiInstall::details($dep);
 			$target = $params['base'] . DS . Inflector::pluralize($details['Type']) . DS . $details['Package'];
 			if (!is_dir($target)) {
-				$_return = MiInstall::install($dep, $params);
-				if ($_return) {
-					$return[1] = array_merge($return[1], $_return[1]);
+				$_out = MiInstall::install($dep, $params);
+				if ($_out) {
+					$out = array_merge($out, $_out);
 				}
 			}
 		}
-		return $return;
+		return array($return, $out);
 	}
 
 /**
@@ -392,6 +394,27 @@ class MiInstall extends Object {
 	}
 
 /**
+ * exec method
+ *
+ * @param mixed $cmd
+ * @param mixed $out null
+ * @return void
+ * @access protected
+ */
+	protected function _exec($cmd, &$out = array()) {
+		MiInstall::_progress($cmd, '  ');
+		if (defined('CAKE_SHELL') && CAKE_SHELL) {
+			system($cmd, $return);
+			return $return;
+		}
+		MiInstall::_progress($out, '    ');
+		if (!class_exists('Mi')) {
+			App::import('Vendor', 'Mi.Mi');
+		}
+		Mi::exec($cmd, $out);
+	}
+
+/**
  * Make sure a git repo is tracking something (if possible)
  *
  * @param mixed $path
@@ -399,26 +422,26 @@ class MiInstall extends Object {
  * @access protected
  */
 	function _initGitRemote($path) {
-		$return = MiInstall::_system("cd $path && git branch");
-		preg_match('#\* ([^ ]*)#', trim(implode(' ', $return[1])), $matches);
+		MiInstall::_exec("cd $path && git branch", $return);
+		preg_match('#\* ([^ ]*)#', trim(implode(' ', $return)), $matches);
 		if (!$matches) {
 			return;
 		}
 		$branch = $matches[1];
 
-		$return = MiInstall::_system("cd $path && git config remote.origin.url");
-		if (!$return[1]) {
+		MiInstall::_exec("cd $path && git config remote.origin.url", $return);
+		if (!$return) {
 			return;
 		}
 
-		$origin = MiInstall::_system("cd $path && git config branch.$branch.remote");
-		$remoteBranch = MiInstall::_system("cd $path && git config branch.$branch.merge");
-		if ($origin[1] && $remoteBranch[1]) {
+		MiInstall::_exec("cd $path && git config branch.$branch.remote", $origin);
+		MiInstall::_exec("cd $path && git config branch.$branch.merge", $remoteBranch);
+		if ($origin && $remoteBranch) {
 			return;
 		}
 
-		MiInstall::_system("cd $path && git config branch.$branch.remote origin");
-		MiInstall::_system("cd $path && git config branch.$branch.merge refs/heads/$branch");
+		MiInstall::_exec("cd $path && git config branch.$branch.remote origin");
+		MiInstall::_exec("cd $path && git config branch.$branch.merge refs/heads/$branch");
 	}
 
 /**
@@ -629,31 +652,6 @@ class MiInstall extends Object {
 	}
 
 /**
- * system method
- *
- * Perform and record a system call
- *
- * @param mixed $command
- * @param mixed $output
- * @return void
- * @access private
- */
-	protected function _system($command, &$output = null) {
-		if (empty(MiInstall::$__Object)) {
-			MiInstall::$__Object = new Object();
-		}
-		MiInstall::$__Object->log($command, 'system_calls');
-		MiInstall::_progress($command, '  ');
-		if (defined('CAKE_SHELL') && CAKE_SHELL) {
-			system($command, $return);
-			return array($return, array());
-		}
-		exec($command, $output, $return);
-		MiInstall::_progress($output, '    ');
-		return array($return, $output);
-	}
-
-/**
  * upgrade method
  *
  * @param mixed $path
@@ -709,7 +707,7 @@ class MiInstall extends Object {
 		} else {
 			$cmd = MiInstall::$settings[$type]['upgrade'];
 		}
-		$return = MiInstall::_system('cd ' . escapeshellarg($path) . ' && ' . $cmd);
+		MiInstall::_exec('cd ' . escapeshellarg($path) . ' && ' . $cmd, $return);
 		$return['cmd'] = $cmd;
 		return MiInstall::$_return[$path] = $return;
 	}
@@ -728,9 +726,10 @@ class MiInstall extends Object {
 			set_time_limit(60);
 		}
 		$stash = false;
-		$return = MiInstall::_system('cd ' . escapeshellarg($path) . ' && git status');
-		if (preg_match('@# (Changed but not updated|Changes to be committed):@', implode($return[1]))) {
-			MiInstall::_system('cd ' . escapeshellarg($path) . ' && git stash save "automatic stash"');
+		$out = array();
+		MiInstall::_exec('cd ' . escapeshellarg($path) . ' && git status', $out);
+		if (preg_match('@# (Changed but not updated|Changes to be committed):@', implode($out))) {
+			MiInstall::_exec('cd ' . escapeshellarg($path) . ' && git stash save "automatic stash"');
 			$stash = true;
 		}
 
@@ -740,23 +739,27 @@ class MiInstall extends Object {
 			$cmd = MiInstall::$settings[$type]['upgrade'];
 		}
 
-		$return = MiInstall::_system('cd ' . escapeshellarg($path) . ' && git branch');
-		if ($cmd === 'git pull' && strpos(implode($return[1]), '* (no branch)') !== false) {
+		$out = array();
+		MiInstall::_exec('cd ' . escapeshellarg($path) . ' && git branch', $out);
+		if ($cmd === 'git pull' && strpos(implode($out), '* (no branch)') !== false) {
 			$cmd = 'git checkout master && git pull origin master';
 		}
-		$return = MiInstall::_system('cd ' . escapeshellarg($path) . ' && ' . $cmd);
-		if ($return[0]) {
+		$result = 'unknown';
+		if (MiInstall::_exec('cd ' . escapeshellarg($path) . ' && ' . $cmd, $out)) {
+			$result = 'success';
 			MiInstall::_initGitRemote($path);
-			$return = MiInstall::_system('cd ' . escapeshellarg($path) . ' && ' . $cmd);
+			MiInstall::_exec('cd ' . escapeshellarg($path) . ' && ' . $cmd, $out);
+		} else {
+			$result = 'fail';
 		}
 		if ($stash) {
-			MiInstall::_system('cd ' . escapeshellarg($path) . ' && git stash pop');
+			MiInstall::_exec('cd ' . escapeshellarg($path) . ' && git stash pop');
 		}
 		if ($type === 'git') {
-			if (!$return[1]) {
+			if ($result === 'fail' && !$out) {
 				$return = array(
 					0,
-					array('Assumed (no return message from issuing git pull')
+					array('Assumed (no return message from issuing git pull)')
 				);
 			}
 		}

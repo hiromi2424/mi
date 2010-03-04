@@ -172,7 +172,7 @@ class IqShell extends Shell {
 		if (empty($cmd)) {
 			return false;
 		}
-		$return = MiInstall::_system($cmd);
+		$return = Mi::exec($cmd);
 		if ($return[0]) {
 			return false;
 		}
@@ -371,7 +371,7 @@ class IqShell extends Shell {
 				}
 				$rows = (array)$rows;
 				if (count($rows) === 1) {
-					$this->out($indent . $key . "\t" . $rows[0]);
+					$this->out($indent . $key . "\t" . current($rows));
 					return;
 				}
 				$this->out($indent . $key);

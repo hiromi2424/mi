@@ -263,7 +263,7 @@ class AutoFormatBehavior extends ModelBehavior {
 		$path = $File->pwd();
 		$errors = $path . '.err';
 		$args = implode($args, ' ');
-		exec("tidy $args -f $errors $path", $out);
+		$this->_exec("tidy $args -f $errors $path", $out);
 		$result = $File->read();
 		$File->delete();
 
@@ -315,6 +315,14 @@ class AutoFormatBehavior extends ModelBehavior {
 			$Model->save();
 		}
 	}
+/**
+ * validateTidy method
+ *
+ * @param mixed $Model
+ * @param mixed $fieldData
+ * @return void
+ * @access public
+ */
 	function validateTidy(&$Model, $fieldData) {
 		extract ($this->settings[$Model->alias]);
 	}
@@ -335,5 +343,17 @@ class AutoFormatBehavior extends ModelBehavior {
 			$string = str_replace($text, html_entity_decode($text), $string);
 		}
 		return $string;
+	}
+
+/**
+ * exec method
+ *
+ * @param mixed $cmd
+ * @param mixed $out null
+ * @return void
+ * @access protected
+ */
+	protected function _exec($cmd, &$out = null) {
+		return Mi::exec($cmd, $out);
 	}
 }
