@@ -370,6 +370,31 @@ class Mi {
 	}
 
 /**
+ * exec proxy method, allowing logging
+ *
+ * @param mixed $cmd
+ * @param array $out array()
+ * @return void
+ * @access public
+ */
+	public function exec($cmd, &$out = array()) {
+		if (DS === '/') {
+			$_out = exec($cmd . ' 2>&1', $out, $return);
+		} else {
+			$_out = exec($cmd, $out, $return);
+		}
+
+		if (Configure::read()) {
+			$source = Debugger::trace(array('depth' => 1, 'start' => 2)) . "\n";
+			CakeLog::write('system_calls', "\n" . $source . Debugger::exportVar(compact('cmd','out','return')));
+		}
+		if ($return) {
+			return false;
+		}
+		return $_out?$_out:true;
+	}
+
+/**
  * files method
  *
  * @param mixed $path
