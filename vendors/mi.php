@@ -377,7 +377,7 @@ class Mi {
  * @return void
  * @access public
  */
-	function exec($cmd, &$output) {
+	public function exec($cmd, &$out = array()) {
 		if (DS === '/') {
 			$_out = exec($cmd . ' 2>&1', $out, $return);
 		} else {
@@ -387,6 +387,7 @@ class Mi {
 		if (Configure::read()) {
 			$source = Debugger::trace(array('depth' => 1, 'start' => 2)) . "\n";
 			CakeLog::write('system_calls_' . date('Y-m-d'), "\n" . $source . Debugger::exportVar(compact('cmd','out','return')));
+			CakeLog::write('system_calls', "\n" . $source . Debugger::exportVar(compact('cmd','out','return')));
 		}
 		if ($return) {
 			return false;

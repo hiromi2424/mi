@@ -33,6 +33,7 @@ class ClearShell extends Shell {
  * @access public
  */
 	public $settings = array(
+		'quiet' => true
 	);
 
 /**
@@ -123,6 +124,9 @@ class ClearShell extends Shell {
 				return $this->help();
 			}
 			list($where, $recursive) = $this->settings[$method];
+			if (!empty($this->params['appFiles'])) {
+				$where = str_replace('_console', '', $where);
+			}
 			$this->out('Looking at ' . $method);
 			if ($recursive) {
 				Clear::recursive($where);
@@ -132,6 +136,20 @@ class ClearShell extends Shell {
 		}
 		$this->out(Clear::messages());
 	}
+
+/**
+ * welcome method
+ *
+ * @return void
+ * @access protected
+ */
+	public function _welcome() {
+		if (!empty($this->settings['quiet'])) {
+			return;
+		}
+		parent::_welcome();
+	}
+
 }
 
 /**
