@@ -33,6 +33,7 @@ class ClearShell extends Shell {
  * @access public
  */
 	public $settings = array(
+		'quiet' => true
 	);
 
 /**
@@ -132,6 +133,20 @@ class ClearShell extends Shell {
 		}
 		$this->out(Clear::messages());
 	}
+
+/**
+ * welcome method
+ *
+ * @return void
+ * @access protected
+ */
+	public function _welcome() {
+		if (!empty($this->settings['quiet'])) {
+			return;
+		}
+		parent::_welcome();
+	}
+
 }
 
 /**
