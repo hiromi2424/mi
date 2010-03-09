@@ -583,6 +583,9 @@ class MiFileEngine extends FileEngine {
  * @access protected
  */
 	static protected function _exec($cmd, &$out = null) {
+		if (!class_exists('Mi')) {
+			App::import('Vendor', 'Mi.Mi');
+		}
 		return Mi::exec($cmd, $out);
 	}
 
