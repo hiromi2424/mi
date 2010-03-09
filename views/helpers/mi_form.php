@@ -278,14 +278,22 @@ class MiFormHelper extends FormHelper {
 				}
 				if (strpos($fieldName, '.') && $fieldName[0] = strtoupper($fieldName[0])) {
 					$bits = explode('.', $fieldName);
-					array_shift($bits);
+					$model = array_shift($bits);
 					$fieldName = array_shift($bits);
 					if ($bits && is_numeric($fieldName)) {
 						$fieldName = array_shift($bits);
 					}
 				}
+				if ($fieldName === 'parent') {
+					if (!empty($model)) {
+						$controller = Inflector::pluralize($model);
+					} else {
+						$controller = $this->params['controller'];
+					}
+				} else {
+					$controller = Inflector::pluralize($fieldName);
+				}
 
-				$controller = Inflector::pluralize($fieldName);
 				$source = '"' . $this->url(array('controller' => $controller, 'action' => 'lookup')) . '"';
 			}
 
