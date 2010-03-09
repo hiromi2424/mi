@@ -293,8 +293,10 @@ class MiFormHelper extends FormHelper {
 				} else {
 					$controller = Inflector::pluralize($fieldName);
 				}
-
-				$source = '"' . $this->url(array('controller' => $controller, 'action' => 'lookup')) . '"';
+				$url = $this->url(array('controller' => $controller, 'action' => 'lookup'));
+				$source = 'function (request, response) {
+					$.getJSON("' . $url . '/" + request["term"] + ".json", {}, response );
+				}';
 			}
 
 			if (isset($this->Asset)) {
@@ -302,7 +304,6 @@ class MiFormHelper extends FormHelper {
 				$this->Asset->codeBlock(
 					'$(document).ready(function() {
 						$("#' . $attributes['id'] . '").autocomplete({
-								minLength: 3,
 								source: ' . $source . ',
 								change: function(event, ui) {
 									if ($("#' . $attributes['id'] . '").text() == "") {
