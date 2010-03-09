@@ -331,6 +331,52 @@ if (is_array($validator['rule'])) {
 	}
 
 /**
+ * search the model - only looks in the id and display fields
+ *
+ * @param mixed $Model
+ * @param string $term ''
+ * @param array $params array()
+ * @return void
+ * @access public
+ */
+	function search(&$Model, $term = '', $params = array()) {
+		$conditions = array();
+		$page = 1;
+		$limit = 20;
+		$recursive = -1;
+
+		if ($term) {
+			$conditions['OR'] = array(
+				$Model->alias . '.' . $Model->primaryKey . ' LIKE' => $term . '%',
+				$Model->alias . '.' . $Model->displayField . ' LIKE' => $term . '%',
+			);
+		}
+
+		if (!empty($params['page'])) {
+			$page = $params['page'];
+			unset($params['page']);
+		}
+
+		if (!empty($params['limit'])) {
+			$limit = $params['limit'];
+			unset($params['limit']);
+		}
+		if (!empty($params['recursive'])) {
+			$limit = $params['recursive'];
+			unset($params['recursive']);
+		}
+
+		$conditions = array_merge($conditions, $params);
+		$return = $Model->find('list', compact('conditions', 'page', 'limit', 'recursive'));
+		if ($term && !$return) {
+			$conditions['OR'][$Model->alias . '.' . $Model->primaryKey . ' LIKE'] = '%' . $term . '%';
+			$conditions['OR'][$Model->alias . '.' . $Model->displayField . ' LIKE'] = '%' . $term . '%';
+			$return = $Model->find('list', compact('conditions', 'page', 'limit'));
+		}
+		return $return;
+	}
+
+/**
  * searchConditions method
  *
  * Get generic search conditions - searching in all fields of the model, and checking associated models if
