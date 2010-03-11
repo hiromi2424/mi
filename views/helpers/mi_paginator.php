@@ -46,7 +46,11 @@ class MiPaginatorHelper extends PaginatorHelper {
 				$title = str_replace('.', ' ', $title);
 			} else {
 				$view = ClassRegistry::getObject('view');
-				$alias = ($view->association) ? $view->association : $view->model;
+				if (isset($view->viewVars['modelClass'])) {
+					$alias = $view->viewVars['modelClass'];
+				} else {
+					$alias = ($view->association) ? $view->association : $view->model;
+				}
 				$title = $alias . ' ' . $title;
 			}
 			if (substr($title, -3) == '_id') {
@@ -58,7 +62,12 @@ class MiPaginatorHelper extends PaginatorHelper {
 			} else {
 				$pluginDomain = '';
 			}
+			$_title = $title;
 			$title = __d($pluginDomain . 'field_names', $title, true);
+			if ($title === $_title && !empty($alias)) {
+				$alias = Inflector::humanize(Inflector::underscore($alias));
+				$title = str_replace($alias . ' ', '', $title);
+			}
 		}
 		$options['url']['page'] = 1;
 		return parent::sort($title, $key, $options);
