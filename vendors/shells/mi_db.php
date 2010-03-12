@@ -224,10 +224,10 @@ class MiDbShell extends Shell {
 		$this->_run('backup', 'dump', null, $settings);
 
 		if (!empty($this->params['bz2'])) {
-			$this->_exec('gzip ' . $settings['toFile'], $out);
+			$this->_exec('gzip -f ' . $settings['toFile'], $out);
 			$target = $settings['toFile'] . '.gz';
 		} elseif (!empty($this->params['gzip'])) {
-			$this->_exec('bzip2 ' . $settings['toFile'], $out);
+			$this->_exec('bzip2 -f ' . $settings['toFile'], $out);
 			$target = $settings['toFile'] . '.bz2';
 		} elseif (!empty($this->params['zip'])) {
 			$this->_exec('zip -rj ' . $settings['toFile'] . '.zip ' . $settings['toFile'], $out);
@@ -235,8 +235,10 @@ class MiDbShell extends Shell {
 		}
 
 		if (!empty($target) && file_exists($target)) {
-			$this->out($out);
-			$this->out();
+			if (empty($this->settings['quiet'])) {
+				$this->out($out);
+				$this->out();
+			}
 			$this->out($target);
 		}
 	}
@@ -458,11 +460,13 @@ class MiDbShell extends Shell {
 		$config = $db->config;
 
 		if (!isset($settings['commands'][$name][$commandName])) {
-			return $this->out("ERROR: no command defined for $commandName");
+			return $this->err("no command defined for $commandName");
 		}
 		$command = $settings['commands'][$name][$commandName];
 		$command = $this->_command($command, $config, $name, $settings);
-		$this->out("Running $friendlyName");
+		if (empty($this->settings['quiet'])) {
+			$this->out("Running $friendlyName");
+		}
 		return $this->_out($command, $settings);
 	}
 
@@ -521,9 +525,14 @@ class MiDbShell extends Shell {
 			return $return;
 		}
 		if (empty($settings['toFile'])) {
-			$this->out(`$command`);
+			$out = `$command`;
+			if (empty($this->settings['quiet'])) {
+				$this->out($out);
+			}
 		} else {
-			$this->out('generating ' . $settings['toFile']);
+			if (empty($this->settings['quiet'])) {
+				$this->out('generating ' . $settings['toFile']);
+			}
 			$command .= ' > ' . escapeshellarg($settings['toFile']);
 			`$command`;
 		}
