@@ -190,7 +190,7 @@ class UrlCache {
 			if (strpos($url, '://')) {
 				return $url;
 			}
-			if (!$url || ($url[0] !== '/' || !preg_match('@/(^|/)(aud|doc|gen|ico|img|txt|vid|js|css|files)/@', $url))) {
+			if (!$url || ($url[0] !== '/' || !preg_match('@(^|/)(aud|doc|gen|ico|img|txt|vid|js|css|files)/@', $url))) {
 				return $this->webroot . ltrim($url, '/');
 			}
 			$isAsset = true;
@@ -211,7 +211,7 @@ class UrlCache {
 			$url = Router::url($url, $full);
 		}
 		if ($isAsset) {
-			if (preg_match('@/(^|/)(aud|doc|gen|ico|img|txt|vid|js|css|files)/@', $url) && !file_exists(WWW_ROOT . ltrim($url, '/'))) {
+			if (preg_match('@(^|/)(aud|doc|gen|ico|img|txt|vid|js|css|files)/@', $url) && !file_exists(WWW_ROOT . ltrim($url, '/'))) {
 				$url = $url . '?token=' . Security::hash($url, null, true);
 			}
 			$this->_cacheGlobal[$hash] = $url;
@@ -291,7 +291,7 @@ class UrlCache {
  */
 	function store($hash, $url, $overwrite = false) {
 		$isAsset = false;
-		if (preg_match('@/(^|/)(aud|doc|gen|ico|img|txt|vid|js|css|files)/@', $url)) {
+		if (preg_match('@(^|/)(aud|doc|gen|ico|img|txt|vid|js|css|files)/@', $url)) {
 			$isAsset = true;
 		}
 		if ($isAsset) {
