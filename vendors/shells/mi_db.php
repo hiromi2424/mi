@@ -74,6 +74,7 @@ class MiDbShell extends Shell {
 			'dumpData' => 'mysqldump :connection -t :standardOptions :extraOptions :database :table',
 			'dumpRoutines' => 'mysqldump :connection -d -t -R :standardOptions :extraOptions :database :table',
 			'import' => 'mysql :connection :extraOptions --database=:database :table < :file',
+			'importCompressed' => ':uncompress :file | mysql :connection :extraOptions --database=:database :table',
 			'diff' => 'diff -u -w :from :to',
 			'stripAutoIncrement' => 'sed -i "s/ AUTO_INCREMENT=[0-9]\+//" :file',
 			'stripComments' => 'sed -i -e "/^--/d" -e "/^$/d" :file',
@@ -221,6 +222,23 @@ class MiDbShell extends Shell {
 			$settings['toFile'] .= '.sql';
 		}
 		$this->_run('backup', 'dump', null, $settings);
+
+		if (!empty($this->params['bz2'])) {
+			$this->_exec('gzip ' . $settings['toFile'], $out);
+			$target = $settings['toFile'] . '.gz';
+		} elseif (!empty($this->params['gzip'])) {
+			$this->_exec('bzip2 ' . $settings['toFile'], $out);
+			$target = $settings['toFile'] . '.bz2';
+		} elseif (!empty($this->params['zip'])) {
+			$this->_exec('zip -rj ' . $settings['toFile'] . '.zip ' . $settings['toFile'], $out);
+			$target = $settings['toFile'] . '.zip';
+		}
+
+		if (!empty($target) && file_exists($target)) {
+			$this->out($out);
+			$this->out();
+			$this->out($target);
+		}
 	}
 
 /**
@@ -337,6 +355,19 @@ class MiDbShell extends Shell {
 			}
 		}
 		$settings['file'] = $file;
+		$meta = pathinfo($file);
+		if ($meta['extension'] !== 'sql') {
+			$settings['compress'] = $meta['extension'];
+		}
+		if (!empty($settings['compress'])) {
+			if ($settings['compress'] === 'gz') {
+				$settings['uncompress'] = 'gzip -dc';
+			} elseif ($settings['compress'] === 'bz2') {
+				$settings['uncompress'] = 'bzip2 -dc';
+			}
+			$this->_run('import', 'importCompressed', false, $settings);
+			return;
+		}
 		$this->_run('import', 'import', false, $settings);
 	}
 
@@ -507,6 +538,9 @@ class MiDbShell extends Shell {
  * @access protected
  */
 	protected function _exec($cmd, &$out = null) {
+		if (!class_exists('Mi')) {
+			App::import('Vendor', 'Mi.Mi');
+		}
 		return Mi::exec($cmd, $out);
 	}
 
