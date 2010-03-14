@@ -232,11 +232,24 @@ class MiFormHelper extends FormHelper {
 		$ac = array_merge(array(
 			'class' => 'autocomplete',
 			'source' => null,
+			'hiddenField' => null,
 			'writeJs' => true
 		), (array)$ac);
 
+		if (!$ac['hiddenField']) {
+			if (is_null($ac['hiddenField']) && (substr($fieldName, -3) == '_id')) {
+				$ac['hiddenField'] = true;
+			}
+
+		}
+
 		$hiddenOptions = $this->_initInputField($fieldName, array('secure' => false));
-		$hidden = $this->hidden($fieldName, $hiddenOptions);
+		if ($ac['hiddenField']) {
+			$hidden = $this->hidden($fieldName, $hiddenOptions);
+			$suffix = '_auto';
+		} else {
+			$suffix = $hidden = '';
+		}
 
 		if ($ac['class']) {
 			if (!empty($attributes['class'])) {
@@ -245,7 +258,7 @@ class MiFormHelper extends FormHelper {
 				$attributes['class'] = $ac['class'];
 			}
 		}
-		$attributes = $this->_initInputField($fieldName . '_auto', array_merge(
+		$attributes = $this->_initInputField($fieldName . $suffix, array_merge(
 			array('type' => 'text'), $attributes
 		));
 
@@ -267,8 +280,15 @@ class MiFormHelper extends FormHelper {
 		if ($ac['writeJs']) {
 			if (!empty($ac['source'])) {
 				$source = $ac['source'];
-				if (is_array($source) && !isset($source['action'])) {
-					$source = json_encode($source, true);
+				if (is_array($source)) {
+					if (isset($source['action'])) {
+						$url = $this->url($source);
+						$source = 'function (request, response) {
+							$.getJSON("' . $url . '/" + request["term"] + ".json", {}, response );
+						}';
+					} else {
+						$source = json_encode($source, true);
+					}
 				} else {
 					$source = '"' . $this->url($source) . '"';
 				}
@@ -278,15 +298,25 @@ class MiFormHelper extends FormHelper {
 				}
 				if (strpos($fieldName, '.') && $fieldName[0] = strtoupper($fieldName[0])) {
 					$bits = explode('.', $fieldName);
-					array_shift($bits);
+					$model = array_shift($bits);
 					$fieldName = array_shift($bits);
 					if ($bits && is_numeric($fieldName)) {
 						$fieldName = array_shift($bits);
 					}
 				}
-
-				$controller = Inflector::pluralize($fieldName);
-				$source = '"' . $this->url(array('controller' => $controller, 'action' => 'lookup')) . '"';
+				if ($fieldName === 'parent') {
+					if (!empty($model)) {
+						$controller = Inflector::pluralize($model);
+					} else {
+						$controller = $this->params['controller'];
+					}
+				} else {
+					$controller = Inflector::pluralize($fieldName);
+				}
+				$url = $this->url(array('controller' => $controller, 'action' => 'lookup'));
+				$source = 'function (request, response) {
+					$.getJSON("' . $url . '/" + request["term"] + ".json", {}, response );
+				}';
 			}
 
 			if (isset($this->Asset)) {
@@ -294,8 +324,7 @@ class MiFormHelper extends FormHelper {
 				$this->Asset->codeBlock(
 					'$(document).ready(function() {
 						$("#' . $attributes['id'] . '").autocomplete({
-								minLength: 3,
-								source: ' . $source . ',
+								source: ' . $source . ($ac['hiddenField']?',
 								change: function(event, ui) {
 									if ($("#' . $attributes['id'] . '").text() == "") {
 										$("#' . $hiddenOptions['id'] . '").val("");
@@ -304,7 +333,7 @@ class MiFormHelper extends FormHelper {
 								select: function(event, ui) {
 									$("#' . $hiddenOptions['id'] . '").val(ui.item.id);
 									$("#' . $attributes['id'] . '").text(ui.item.label);
-								}
+								}':'') . '
 							});
 					});'
 				);
