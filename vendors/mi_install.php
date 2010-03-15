@@ -59,7 +59,7 @@ class MiInstall extends Object {
 			'upgrade' => 'git svn fetch && git svn rebase',
 			),
 		'svn' => array(
-			'upgrade' => 'svn cleanup && svn up',
+			'upgrade' => 'svn cleanup && svn up --non-interactive',
 			#'upgrade' => 'svn cleanup && svn up --user :username --password :password',
 			'username' => '""',
 			'password' => '""',
