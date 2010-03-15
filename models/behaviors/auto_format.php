@@ -354,6 +354,9 @@ class AutoFormatBehavior extends ModelBehavior {
  * @access protected
  */
 	protected function _exec($cmd, &$out = null) {
+		if (!class_exists('Mi')) {
+			App::import('Vendor', 'Mi.Mi');
+		}
 		return Mi::exec($cmd, $out);
 	}
 }
