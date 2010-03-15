@@ -67,6 +67,7 @@ class MiDbShell extends Shell {
 	protected $commands = array(
 		'mysql' => array(
 			'connection' => '--host=:host --port=:port --user=:login --password=:password --default-character-set=:encoding',
+			'copy' => ':export | :import',
 			'standardOptions' => '--set-charset -e',
 			'dump' => 'mysqldump :connection -d -R :standardOptions :extraOptions :database :table',
 			'dumpComplete' => 'mysqldump :connection -R :standardOptions :extraOptions :database :table',
@@ -93,22 +94,34 @@ class MiDbShell extends Shell {
 		$methods = get_class_methods($this);
 		$methods = array_diff($methods, $shell);
 		$methods = array_diff($methods, $exclude);
-		foreach ($methods as $method) {
-			if (!isset($help[$method]) && $method[0] !== '_') {
-				$help[$method] = $method;
-			}
+		switch ($this->command) {
+			case 'copy':
+				$this->out('Usage: cake ' . $this->name . ' copy fromThisConnection toThisConnection');
+				$this->out('       cake ' . $this->name . ' copy -from fromThisConnection -to toThisConnection');
+				$this->out('       cake ' . $this->name . ' copy -from fromThisConnection -to toThisConnection -table justthistable');
+				$this->out('');
+				$this->out('The copy command allows you to copy a whole db from one connection to another');
+				$this->out('It issues a dump (which includes drop and create tables) and pipes it directly');
+				$this->out('   to the import of the target connection');
+				break;
+			default:
+				foreach ($methods as $method) {
+					if (!isset($help[$method]) && $method[0] !== '_') {
+						$help[$method] = $method;
+					}
+				}
+				$this->out('Usage: cake ' . $this->name . ' command');
+				$this->out('');
+				$this->out($this->name . ' is a shell for manipulating database structures and data');
+				$this->out('');
+				$this->out('Commands:');
+				foreach($help as $message) {
+					$this->out("\t" . $message);
+				}
 		}
-		$this->out($this->name . '. Version ' . $this->version);
-		$this->out('Usage: cake ' . $this->name . ' command');
 		$this->out('');
-		$this->out($this->name . ' is a shell for manipulating database structures and data');
-		$this->out('');
-		$this->out('Commands:');
-		foreach($help as $message) {
-			$this->out("\t" . $message);
-		}
+		$this->out('Use the -v flag to see what commands are being issued');
 		$this->hr();
-
 	}
 
 /**
@@ -319,6 +332,42 @@ class MiDbShell extends Shell {
 		$this->_run('strip comments', 'stripComments', null, $settings);
 	}
 
+	public function copy() {
+		$from = $to = null;
+		if (!empty($this->params['from'])) {
+			$from = $this->params['from'];
+		}
+		if (!empty($this->params['to'])) {
+			$to = $this->params['to'];
+		}
+		if (empty($from) || empty($to)) {
+			if (count($this->args) >= 2) {
+				list($from, $to) = $this->args;
+			} else {
+				return $this->help();
+			}
+		}
+
+		$fromDb =& ConnectionManager::getDataSource($from);
+		$name = $fromDb->config['driver'];
+		$command = 'dump';
+		// Allow for filters in the future
+		$this->_commandNameSuffix($command, 'complete', $this->settings);
+		$command = $this->settings['commands'][$name][$command];
+		$dump = $this->_command($command, $fromDb->config, $name, $this->settings);
+
+		$toDb =& ConnectionManager::getDataSource($to);
+		$name = $toDb->config['driver'];
+		$command = str_replace('< :file', '', $this->settings['commands'][$name]['import']);
+		$import = $this->_command($command, $toDb->config, $name, $this->settings);
+
+		$command = "$dump | $import";
+		if (empty($this->settings['quiet'])) {
+			$this->out("Copying tables from $from to $to");
+		}
+		return $this->_out($command, $this->settings);
+	}
+
 /**
  * dump method
  *
@@ -432,29 +481,8 @@ class MiDbShell extends Shell {
 		$db =& ConnectionManager::getDataSource($settings['connection']);
 		$name = $this->db->config['driver'];
 
-		if ($version === null) {
-			if (isset($this->args[0]) && $this->args[0] == '*') {
-				$file = str_replace('_*', '', $settings['toFile']);
-				foreach($settings['commands'][$name] as $version => $_) {
-					if (strpos($version, $commandName) === false) {
-						continue;
-					}
-					$version = str_replace($commandName, '', $version);
-					if ($version) {
-						$settings['toFile'] = str_replace('.sql', '_' . Inflector::underscore($version) . '.sql', $file);
-					} else {
-						$settings['toFile'] = $file;
-					}
-					$this->_run($friendlyName, $commandName, $version);
-				}
-				return;
-			} elseif (!empty($this->args[0])) {
-				$version = $this->args[0];
-			}
-		}
+		$version = $this->_commandNameSuffix($commandName, $version, $settings);
 		if ($version) {
-			$version = ucfirst(Inflector::camelize($version));
-			$commandName .= $version;
 			$friendlyName .= $version;
 		}
 		$config = $db->config;
@@ -567,5 +595,29 @@ class MiDbShell extends Shell {
 			new Folder($dir, true);
 		}
 		return $name;
+	}
+
+/**
+ * commandNameSuffix method
+ *
+ * @param mixed $commandName
+ * @param mixed $version
+ * @param array $settings array()
+ * @return void
+ * @access protected
+ */
+	protected function _commandNameSuffix(&$commandName, $version, &$settings = array()) {
+		$settings = array_merge($this->settings, $settings);
+		if ($version === null) {
+			if ($this->args) {
+				$version = $this->args[0];
+			}
+		}
+		if ($version) {
+			$return = ucfirst(Inflector::camelize($version));
+			$commandName .= $return;
+			return $return;
+		}
+		return '';
 	}
 }
