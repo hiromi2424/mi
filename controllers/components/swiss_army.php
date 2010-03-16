@@ -289,9 +289,10 @@ class SwissArmyComponent extends Object {
 	function blackHole($reason = null) {
 		$C =& $this->Controller;
 		if ($reason == 'post') {
-			$url = $C->params['url']['url'];
+			$url = '/' . ltrim($C->params['url']['url'], '/');
 			$hash = Security::hash($url, null, true);
-			if (!Configure::read() && $hash !== str_replace('.ajax', '', $C->params['url']['token'])) {
+			$submittedHash = preg_replace('@\..*$@', '', $C->params['url']['token']);
+			if ($hash !== $submittedHash) {
 				return $this->back();
 			}
 			if ($C->action === 'admin_delete') {
