@@ -357,8 +357,14 @@ class MiDbShell extends Shell {
 		$dump = $this->_command($command, $fromDb->config, $name, $this->settings);
 
 		$toDb =& ConnectionManager::getDataSource($to);
+
+		if ($fromDb->config === $toDb->config) {
+			$this->err("$from and $to are the same database. Stopping, no action taken");
+			return $this->_stop();
+		}
+
 		$name = $toDb->config['driver'];
-		$command = str_replace('< :file', '', $this->settings['commands'][$name]['import']);
+		$command = str_replace(' :table < :file', '', $this->settings['commands'][$name]['import']);
 		$import = $this->_command($command, $toDb->config, $name, $this->settings);
 
 		$command = "$dump | $import";
