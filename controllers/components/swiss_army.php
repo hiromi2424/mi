@@ -77,6 +77,7 @@ class SwissArmyComponent extends Object {
 		),
 		'redirectOnError' => false, // a Url
 		'sessionReferer' => true,
+		'_usingSubdomains' => null
 	);
 
 /**
@@ -294,6 +295,9 @@ class SwissArmyComponent extends Object {
 			}
 
 			$url = '/' . ltrim($C->params['url']['url'], '/');
+			if ($this->settings['_usingSubdomains']) {
+			   $url = 'http://' . env('HTTP_HOST') . $url;
+			}
 			$hash = Security::hash($url, null, true);
 			$submittedHash = preg_replace('@\..*$@', '', $C->params['url']['token']);
 			if ($hash !== $submittedHash) {
@@ -318,8 +322,9 @@ class SwissArmyComponent extends Object {
 			$this->settings['storeHistory'] = false;
 			$this->Session->write('referer', $this->back(1, null, false, 'norm', false));
 			$C->params['isAjax'] = $C->RequestHandler->isAjax();
+			$layout = null;
 			if ($C->params['isAjax']) {
-				$C->layout = 'ajax';
+				$layout = 'ajax';
 			}
 			$view = '/elements/confirm_action';
 			if (method_exists($C, '_confirmationView')) {
@@ -327,7 +332,7 @@ class SwissArmyComponent extends Object {
 					$view = $_view;
 				}
 			}
-			echo $C->render($view);
+			echo $C->render($view, $layout);
 			return $C->_stop();
 		}
 		if ($reason == 'auth' && $C->data) {
@@ -395,6 +400,14 @@ class SwissArmyComponent extends Object {
 		}
 		$this->Controller =& $C;
 		$this->settings = array_merge($this->settings, $config);
+		if ($this->settings['_usingSubdomains'] === null) {
+			$cookieDomain = ini_get('session.cookie_domain');
+			if ($cookieDomain && $cookieDomain[0] === '.') {
+				$this->settings['_usingSubdomains'] = true;
+			} else {
+				$this->settings['_usingSubdomains'] = false;
+			}
+		}
 		if ($this->_storeHistory()) {
 			$thread = $this->_browseKey();
 			$this->__history[$thread] = (array)$this->Session->read('history.' . $thread);
@@ -908,18 +921,7 @@ class SwissArmyComponent extends Object {
  * @access private
  */
 	function __normalizeUrl($url = null, $key = false) {
-		static $usingSubdomains = null;
-
-		if ($usingSubdomains === null) {
-			$cookieDomain = ini_get('session.cookie_domain');
-			if ($cookieDomain && $cookieDomain[0] === '.') {
-				$usingSubdomains = true;
-			} else {
-				$usingSubdomains = false;
-			}
-		}
-
-		if (is_string($url) && $url[0] === '/' && $usingSubdomains) {
+		if (is_string($url) && $url[0] === '/' && $this->settings['_usingSubdomains']) {
 		   $url = 'http://' . env('HTTP_HOST') . $url;
 		}
 
