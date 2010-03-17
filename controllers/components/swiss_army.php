@@ -77,7 +77,7 @@ class SwissArmyComponent extends Object {
 		),
 		'redirectOnError' => false, // a Url
 		'sessionReferer' => true,
-		'_usingSubdomains' => null
+		'usingSubdomains' => null
 	);
 
 /**
@@ -295,7 +295,7 @@ class SwissArmyComponent extends Object {
 			}
 
 			$url = '/' . ltrim($C->params['url']['url'], '/');
-			if ($this->settings['_usingSubdomains']) {
+			if ($this->settings['usingSubdomains']) {
 			   $url = 'http://' . env('HTTP_HOST') . $url;
 			}
 			$hash = Security::hash($url, null, true);
@@ -400,12 +400,12 @@ class SwissArmyComponent extends Object {
 		}
 		$this->Controller =& $C;
 		$this->settings = array_merge($this->settings, $config);
-		if ($this->settings['_usingSubdomains'] === null) {
+		if ($this->settings['usingSubdomains'] === null) {
 			$cookieDomain = ini_get('session.cookie_domain');
 			if ($cookieDomain && $cookieDomain[0] === '.') {
-				$this->settings['_usingSubdomains'] = true;
+				$this->settings['usingSubdomains'] = true;
 			} else {
-				$this->settings['_usingSubdomains'] = false;
+				$this->settings['usingSubdomains'] = false;
 			}
 		}
 		if ($this->_storeHistory()) {
@@ -921,7 +921,7 @@ class SwissArmyComponent extends Object {
  * @access private
  */
 	function __normalizeUrl($url = null, $key = false) {
-		if (is_string($url) && $url[0] === '/' && $this->settings['_usingSubdomains']) {
+		if (is_string($url) && $url[0] === '/' && $this->settings['usingSubdomains']) {
 		   $url = 'http://' . env('HTTP_HOST') . $url;
 		}
 
