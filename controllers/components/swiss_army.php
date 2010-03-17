@@ -395,17 +395,21 @@ class SwissArmyComponent extends Object {
 			$this->__history[$thread] = (array)$this->Session->read('history.' . $thread);
 			if (isset($C->Auth) && $C->action === 'login') {
 				$referer = $this->Session->read('Auth.redirect');
-				if ($referer !== '/' && end($this->__history[$thread]) !== $referer) {
-					$this->__history[$thread][] = $referer;
+				if ($referer) {
+				   	if ($referer !== '/' && end($this->__history[$thread]) !== $referer) {
+						$this->__history[$thread][] = $referer;
+					}
 				}
 			}
-
 			$this->__last = end($this->__history[$thread]);
 			$this->__here = $this->__normalizeUrl(preg_replace('@^' . $C->webroot . '@', '/', $C->here));
 			$this->__referer = $C->referer();
 			$this->__fallBack = $this->__normalizeUrl(array('action' => 'index'));
 			if (!$this->__last) {
 				$this->__last = $this->__fallBack;
+			}
+			if (isset($C->Auth) && $C->action === 'login') {
+				$C->Auth->loginRedirect = $this->__last;
 			}
 		}
 		$this->_autoLayout();
@@ -895,11 +899,25 @@ class SwissArmyComponent extends Object {
  * normalizeUrl method
  *
  * @param mixed $url null
- * @param bool $key false
  * @return void
  * @access private
  */
 	function __normalizeUrl($url = null, $key = false) {
+		static $usingSubdomains = null;
+
+		if ($usingSubdomains === null) {
+			$cookieDomain = ini_get('session.cookie_domain');
+			if ($cookieDomain && $cookieDomain[0] === '.') {
+				$usingSubdomains = true;
+			} else {
+				$usingSubdomains = false;
+			}
+		}
+
+		if (is_string($url) && $url[0] === '/' && $usingSubdomains) {
+		   $url = 'http://' . env('HTTP_HOST') . $url;
+		}
+
 		if ($key && is_string($url)) {
 			return str_replace('.ajax', '', $url);
 		}
