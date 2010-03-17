@@ -283,6 +283,9 @@ class MiCache extends Object {
 		if ($return !== null && !Configure::read('Cache.disable')) {
 			return $return;
 		}
+		if ($func === 'find') {
+			$params[1]['miCache'] = 'cacheRequest';
+		}
 		$return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
 		MiCache::write($cacheKey, $return, MiCache::$setting);
 		return $return;
@@ -299,17 +302,24 @@ class MiCache extends Object {
 			MiCache::config();
 		}
 
+		$offset = $prefix = null;
+		if (is_string($string)) {
+			$prefix = $string . DS;
+		}
+
 		if (count(func_get_args() > 1 || !is_string($string))) {
+			if (is_string($string[0])) {
+				$prefix = $string[0] . DS;
+			}
 			$string = serialize(func_get_args());
 		}
 		$hash = md5(Configure::read('Config.language') . $string);
 		$config = current(MiCache::config());
-		$offset = $prefix = null;
 		for ($i = 1; $i <= $config['dirLevels']; $i++) {
 			$prefix .= substr($hash, $offset, $config['dirLength']) . DS;
 			$offset = $i * $config['dirLength'];
 		}
-		return $prefix . $hash;
+		return str_replace('.', '_', strtolower($prefix . $hash));
 	}
 
 /**
