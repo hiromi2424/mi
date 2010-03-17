@@ -136,17 +136,18 @@ class MiCache extends Object {
 /**
  * clear method
  *
- * Delete everything in the cache
+ * API DIFFERENCE
+ * if a topKey is specified, delete everything under setting-dir/topKey
  *
  * @param bool $check false
  * @return void
  * @access public
  */
-	function clear($check = false) {
+	function clear($topKey = false) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
-		Cache::clear($check, MiCache::$setting);
+		Cache::clear($topKey, MiCache::$setting);
 	}
 
 /**
@@ -555,19 +556,25 @@ class MiFileEngine extends FileEngine {
 	}
 
 /**
- * Delete all the files, ignoring any dot files, and any file named 'empty'
- * For the not-windows version, also delete any empty folders when you're done
+ * Delete everything under the requested cache setting.
  *
- * @param boolean $check Optional - only delete expired cache items
+ * API DIFFERENCE
+ * if a topKey is specified, delete everything under setting-dir/topKey
+ *
+ * @param mixed $topKey Optional - the top level cache key to delete
  * @return boolean True if the cache was succesfully cleared, false otherwise
  * @access public
  */
-	function clear($check = null) {
+	function clear($topKey = null) {
 		if (empty($this->_init)) {
 			return false;
 		}
 
-		$dir = dirname($this->settings['path']);
+		$dir = $this->settings['path'];
+
+		if ($topKey && $topKey !== true) {
+			$dir .= DS . str_replace('.', '_', strtolower($topKey));
+		}
 
 		if (DS === '\\') {
 			$Folder = new Folder($dir);
@@ -581,7 +588,7 @@ class MiFileEngine extends FileEngine {
 			return;
 		}
 
-		return MiFileEngine::_exec("find $dir -type f ! -iwholename \"*.svn*\" ! -name \"empty\" -exec rm -f {} \; && find $dir -type d -empty -print0 | xargs -0 rmdir");
+		return MiFileEngine::_exec("rm -rf $dir/*");
 	}
 
 /**
