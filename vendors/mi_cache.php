@@ -309,7 +309,7 @@ class MiCache extends Object {
 		}
 
 		if (count(func_get_args() > 1 || !is_string($string))) {
-			if (is_string($string[0])) {
+			if (!$prefix && is_string($string[0])) {
 				$prefix = $string[0] . DS;
 			}
 			$string = serialize(func_get_args());
