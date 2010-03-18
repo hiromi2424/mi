@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Short description for swiss_army.php
  *
@@ -921,7 +920,7 @@ class SwissArmyComponent extends Object {
  * @access private
  */
 	function __normalizeUrl($url = null, $key = false) {
-		if (is_string($url) && $url[0] === '/' && $this->settings['usingSubdomains']) {
+		if (is_string($url) && $url && $url[0] === '/' && $this->settings['usingSubdomains']) {
 		   $url = 'http://' . env('HTTP_HOST') . $url;
 		}
 
