@@ -371,7 +371,7 @@ class MiCache extends Object {
 			if ($return === null) {
 				$return = Configure::read($cacheKey);
 			}
-			MiCache::write($aroPrefix . $cacheKey, $return, MiCache::$setting);
+			MiCache::write('_' . $aroPrefix . $cacheKey, $return, MiCache::$setting);
 		}
 		return $return;
 	}
