@@ -1,6 +1,6 @@
 #<?php die() ?>
 Package: mi
-Source: http://svn.assembla.com/svn/mi/branches/mi_plugin
+Source: git://github.com/AD7six/mi.git
 Type: plugin
 Section: utilities
 Description: A collection of general utility classes
@@ -8,4 +8,4 @@ Description: A collection of general utility classes
  other mi plugins rely upon.
 Recommends: mi_asset, mi_email, mi_media, mi_settings, mi_users
 Suggests: mi_acl, mi_development
-Bugs: http://thechaw.com/mi/tickets/add
+Bugs: http://github.com/AD7six/mi/issues
