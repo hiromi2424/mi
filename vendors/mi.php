@@ -620,6 +620,9 @@ class Mi {
 /**
  * views method
  *
+ * If $plugin is not null it will only include views directly in a plugin - it will exclude views
+ * that would otherwise be inherited from the main app
+ *
  * @param mixed $controllerName
  * @param mixed $plugin
  * @param array $excludePatterns
@@ -631,10 +634,15 @@ class Mi {
 			extract(am(array('controllerName' => null), $controllerName));
 		}
 		$paths = Mi::_viewPaths($plugin);
+
 		$folder = Inflector::underscore($controllerName);
-		foreach ($paths as &$path) {
+		foreach ($paths as $i => &$path) {
+			if (!strpos($path, 'plugins')) {
+				unset ($paths[$i]);
+			}
 			$path .= $folder;
 		}
+
 		$files = array();
 		foreach ($paths as $path) {
 			if (!strpos($path, DS . 'view')) {
@@ -642,6 +650,7 @@ class Mi {
 			}
 			$files = Set::merge($files, Mi::files($path, null, '.*ctp'));
 		}
+
 		$return = array();
 		foreach ($files as $file) {
 			if ($nameOnly) {
