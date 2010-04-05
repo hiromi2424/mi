@@ -96,6 +96,27 @@ class OneQueryBehaviorTestCase extends CakeTestCase {
 				)
 			)
 		));
+
+		$results = $this->Article->find('all', array(
+			'recursive' => 0,
+			'fields' => '*',
+			'conditions' => array(
+				'Comment.user_id' => 2
+			)
+		));
+
+		$lastQuery = $this->_lastQuery();
+		$this->assertQuery($lastQuery, '
+			SELECT *, Article.id
+			FROM articles AS Article
+			LEFT JOIN comments AS Comment ON (
+				Comment.article_id = Article.id
+			)
+			WHERE
+				Comment.user_id = 2
+		');
+		$queryCount = $this->_queryCount();
+		$this->assertEqual($queryCount, 1);
 	}
 
 /**
@@ -182,7 +203,9 @@ class OneQueryBehaviorTestCase extends CakeTestCase {
 	function assertQuery($query, $expected = array()) {
 		$query = $this->_normalizeQuery($query);
 		$expected = $this->_normalizeQuery($expected);
-		$this->assertEqual($query, $expected);
+		$errorMessage = "Queries don't match\n$query\n$expected";
+
+		$this->assertEqual($query, $expected, $errorMessage);
 	}
 
 /**
@@ -287,13 +310,16 @@ class OneQueryBehaviorTestCase extends CakeTestCase {
  * @access protected
  */
 	function _normalizeQuery($query) {
+		$query = str_replace(array("\n", "\t"), ' ', $query);
 		$query = str_replace(array(
 			$this->db->startQuote,
 			$this->db->endQuote,
 			$this->db->config['prefix'],
 			'WHERE 1 = 1',
 		), '', $query);
-		return trim(preg_replace('@\s+@', ' ', $query));
+		$query = trim(preg_replace('@\s+@s', ' ', $query));
+		$query = str_replace(array('( ', ' )'), array('(', ')'), $query);
+		return $query;
 	}
 
 /**
