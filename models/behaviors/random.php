@@ -229,13 +229,15 @@ class RandomBehavior extends ModelBehavior {
  * @return void
  * @access public
  */
-	function randomize(&$Model, $conditions = array()) {
+	function randomize(&$Model, $conditions = true) {
 		$max = $this->maxRand($Model, true);
 		$db = ConnectionManager::getDataSource($Model->useDbConfig);
-		$Model->updateAll(array('random' => $db->expression('FLOOR(RAND() * ' . $max . ')')), $conditions);
+		$Model->updateAll(
+			array('random' => 'FLOOR(RAND() * ' . $max . ')'),
+			$conditions
+		);
 		return $max;
 	}
-
 /**
  * maxRand method
  *

@@ -44,7 +44,9 @@ class Message extends CakeTestModel {
  * @var array
  * @access public
  */
-	var $actsAs = array('Mi.Random' => array('autoRandom' => false));
+	var $actsAs = array(
+		'Mi.Random' => array('autoRandom' => false)
+	);
 }
 
 /**
@@ -62,7 +64,7 @@ class RandomTestCase extends CakeTestCase {
  * @var array
  * @access public
  */
-	var $fixtures = array('message');
+	var $fixtures = array('plugin.mi.message');
 
 /**
  * testSetup method
@@ -476,7 +478,7 @@ class RandomTestCase extends CakeTestCase {
 			$results[$row['Message']['id']] = 1;
 		}
 		if (!$this->assertTrue(count($results) > $count * 0.5)) {
-			debug("More than half of the result set of $count rows was not selected during $queries 'random' queries.\r\n" .
+			debug("More than half of the result set of $count rows were not selected during $queries 'random' queries.\r\n" .
 				"Due to the nature of random number generation this test may fail - it should not fail consistently.");
 		}
 		sort($results);
