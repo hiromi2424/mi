@@ -28,6 +28,13 @@ App::import('Helper', 'Form');
  * @subpackage    mi.views.helpers
  */
 class MiFormHelper extends FormHelper {
+
+/**
+ * helpers property
+ *
+ * @var array
+ * @access public
+ */
 	public $helpers = array(
 		'Session',
 		'Html',
@@ -81,6 +88,9 @@ class MiFormHelper extends FormHelper {
 		}
 
 		$return = parent::create($model, $options);
+		if (!empty($options['noReferer'])) {
+			return $return;
+		}
 		if (!empty($this->data['App']['referer'])) {
 			$referer = $this->data['App']['referer'];
 		} else {
