@@ -1,8 +1,6 @@
 <?php
 /**
- * Short description for list.test.php
- *
- * Long description for list.test.php
+ * Test case for list behavior
  *
  * PHP versions 4 and 5
  *
@@ -54,7 +52,7 @@ class MessageList extends CakeTestModel {
  * @var array
  * @access public
  */
-	var $actsAs = array('List' => array('sequence' => 'random'));
+	var $actsAs = array('Mi.List' => array('sequence' => 'random'));
 }
 
 /**
@@ -72,7 +70,7 @@ class ListTestCase extends CakeTestCase {
  * @var array
  * @access public
  */
-	var $fixtures = array('message');
+	var $fixtures = array('plugin.mi.message');
 
 /**
  * start method
@@ -116,10 +114,6 @@ class ListTestCase extends CakeTestCase {
  */
 	function testVerify() {
 		$result = $this->Message->verify();
-		if ($result !== true) {
-			debug ($result);
-		die;
-		}
 		$this->assertIdentical($result, true);
 	}
 
@@ -150,7 +144,6 @@ class ListTestCase extends CakeTestCase {
 		$this->assertIdentical($result, true);
 		$result = $this->Message->verify();
 		$this->assertIdentical($result, true);
-
 	}
 
 /**
@@ -440,7 +433,10 @@ class MultiListTestCase extends ListTestCase {
 		$this->assertFalse($return);
 
 		$return = $this->Message->save(array('name' => 'New', 'section' => 1));
-		$one = $this->Message->listFind(1, 'list', array('fields' => array('random', 'name')));
+		$one = $this->Message->find('list', array(
+			'conditions' => array('section' => 1),
+			'fields' => array('random', 'name')
+		));
 		$expected = array (
 			1 => 'First',
 			2 => 'Second',
@@ -458,8 +454,15 @@ class MultiListTestCase extends ListTestCase {
 		$this->assertTrue($return);
 
 		$return = $this->Message->save(array('name' => 'New', 'section' => 2));
-		$one = $this->Message->listFind(1, 'list', array('fields' => array('random', 'name')));
-		$two = $this->Message->listFind(2, 'list', array('fields' => array('random', 'name')));
+		$one = $this->Message->find('list', array(
+			'conditions' => array('section' => 1),
+			'fields' => array('random', 'name')
+		));
+		$two = $this->Message->find('list', array(
+			'conditions' => array('section' => 2),
+			'fields' => array('random', 'name')
+		));
+
 		$expected = array (
 			1 => 'First',
 			2 => 'Second',
@@ -476,8 +479,13 @@ class MultiListTestCase extends ListTestCase {
 		$this->assertIdentical(array_values($two), array_values($expected));
 		$this->assertTrue($return);
 	}
+
 	function testFind() {
-		$results = $this->Message->listFind(1, 'list', array('fields' => array('random', 'name')));
+		$results = $this->Message->find('list', array(
+			'conditions' => array('MessageList.section' => 1),
+			'fields' => array('random', 'name')
+		));
+
 		$expected = array (
 			1 => 'First',
 			2 => 'Second',
@@ -521,6 +529,13 @@ class MultiListTestCase extends ListTestCase {
 		$result = $this->Message->verify();
 		$this->assertIdentical($result, true);
 	}
+
+/**
+ * testMoveUp method
+ *
+ * @return void
+ * @access public
+ */
 	function testMoveUp() {
 		$this->Message->id = 9;
 		$this->Message->moveUp();
@@ -607,6 +622,7 @@ class MultiListTestCase extends ListTestCase {
 		);
 		$this->assertIdentical($results, $expected);
 	}
+
 	function testDelete() {
 		$results = $this->Message->find('list', array('fields' => array('random', 'name'), 'conditions' => array('section' => 2)));
 		$expected = array (
@@ -623,13 +639,15 @@ class MultiListTestCase extends ListTestCase {
 		);
 		$this->assertIdentical($results, $expected);
 
-		$this->Message->id = null;
-		$before = $this->Message->find('count');
 		$this->Message->id = 5;
+		$before = $this->Message->find('count');
 		$this->Message->delete();
 		$after = $this->Message->find('count');
 		$this->assertIdentical($before, $after + 1);
-		$results = $this->Message->find('list', array('conditions' => array('section' => 1)));
+
+		$results = $this->Message->find('list', array(
+			'conditions' => array('section' => 1)
+		));
 		$expected = array (
 			1 => 'First',
 			9 => 'Second',
@@ -641,7 +659,12 @@ class MultiListTestCase extends ListTestCase {
 			8 => 'Ninth',
 			2 => 'Tenth',
 		);
-		$results = $this->Message->find('list', array('fields' => array('random', 'name'), 'conditions' => array('section' => 2)));
+		$this->assertIdentical($results, $expected);
+
+		$results = $this->Message->find('list', array(
+			'conditions' => array('section' => 2),
+			'fields' => array('random', 'name')
+		));
 		$expected = array (
 			1 => 'First',
 			2 => 'Second',
@@ -657,4 +680,3 @@ class MultiListTestCase extends ListTestCase {
 		$this->assertIdentical($results, $expected);
 	}
 }
-?>

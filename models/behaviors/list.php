@@ -66,8 +66,10 @@ class ListBehavior extends ModelBehavior {
  * @access protected
  */
 	var $_defaultSettings = array(
-		'sequence' => 'order', 'scope' => '1 = 1',
-		'previousSequence' => null, 'recursive' => -1,
+		'previousSequence' => null,
+		'recursive' => -1,
+		'scope' => '1 = 1',
+		'sequence' => 'order',
 		'strict' => false
 	);
 
@@ -123,6 +125,9 @@ class ListBehavior extends ModelBehavior {
  */
 	function beforeFind(&$Model, $queryData) {
 		$scope = $this->_scope($Model, $this->settings[$Model->alias]['scope'], null, $queryData['conditions']);
+		if ($scope) {
+			$this->_normalizeConditions($Model, $queryData['conditions']);
+		}
 		if ($scope === false) {
 			if ($this->settings[$Model->alias]['strict']) {
 				return false;
@@ -328,20 +333,21 @@ class ListBehavior extends ModelBehavior {
 		} else {
 			$derivedScope = $this->_scope($Model, $scope);
 			if ($derivedScope === false) {
+				$scope = (array)$scope;
 				$scope[0] = 'DISTINCT ' . $scope[0];
 				$permutations = $Model->find('all', array(
 					'fields' => $scope,
 					'recursive' => -1
 				));
-				$false = false;
+				$aFail = false;
 				foreach ($permutations as $row) {
 					$result = $this->verify($Model, $row[$Model->alias]);
 					if ($result !== true) {
-						$false = true;
+						$aFail = true;
 					}
 					$return[current($row)] = $result;
 				}
-				if ($false) {
+				if ($aFail) {
 					return $return;
 				}
 				return true;
@@ -386,16 +392,13 @@ class ListBehavior extends ModelBehavior {
 		$db =& ConnectionManager::getDataSource($Model->useDbConfig);
 		$_id = $Model->id;
 		$Model->id = null;
-
 		list($edge) = array_values($Model->find('first', array(
 			'conditions' => $scope,
 			'fields' => $db->calculate($Model, 'max', array($Model->alias . '.' . $sequence, 'edge')),
 			'recursive' => $recursive,
 			'order' => false
 		)));
-
 		$Model->id = $_id;
-
 		return ife(empty($edge['edge']), 0, $edge['edge']);
 	}
 
@@ -424,6 +427,32 @@ class ListBehavior extends ModelBehavior {
 		$Model->id = $_id;
 
 		return ife(empty($edge[$sequence]), 0, $edge[$sequence]);
+	}
+
+/**
+ * normalizeConditions method
+ *
+ * Ensure that conditions are model. prefixed
+ *
+ * @param mixed $Model
+ * @param mixed $conditions
+ * @return void
+ * @access protected
+ */
+	function _normalizeConditions(&$Model, &$conditions) {
+		$scope = $this->settings[$Model->alias]['scope'];
+		if ($scope === '1 = 1' || !$conditions) {
+			return;
+		}
+		foreach ((array)$scope as $i => $field) {
+			if (!is_numeric($i)) {
+				continue;
+			}
+			if (array_key_exists($field, $conditions)) {
+				$conditions[$Model->alias . '.' . $field] = $conditions[$field];
+				unset($conditions[$field]);
+			}
+		}
 	}
 
 /**
@@ -523,17 +552,20 @@ class ListBehavior extends ModelBehavior {
 			$Model->Behaviors->enable($this->name);
 		} elseif (!empty($Model->data[$Model->alias]) && array_key_exists($field, $Model->data[$Model->alias])) {
 			$value = $Model->data[$Model->alias][$field];
-		} elseif (!empty($conditions) && array_key_exists($field, $conditions)) {
+		} elseif (is_array($conditions) && array_key_exists($field, $conditions)) {
 			$value = $conditions[$field];
-		} elseif (!empty($conditions) && array_key_exists($test, $conditions)) {
+		} elseif (is_array($conditions) && array_key_exists($test, $conditions)) {
 			$value = $conditions[$field];
-		} elseif (!empty($conditions) && array_key_exists($Model->alias . '.' . $field, $conditions)) {
+		} elseif (is_array($conditions) && array_key_exists($Model->alias . '.' . $field, $conditions)) {
 			$value = $conditions[$Model->alias . '.' . $field];
 		} else {
 			if ($this->settings[$Model->alias]['strict']) {
 				trigger_error("ListBehavior::_scopeField() - the value for the field '$field' cannot be determined.
 					Set the model id to a valid value before calling", E_USER_WARNING);
 			}
+			return false;
+		}
+		if ($value === false) {
 			return false;
 		}
 		return array($value);
