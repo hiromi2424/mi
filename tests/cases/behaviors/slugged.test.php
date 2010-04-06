@@ -1,6 +1,9 @@
 <?php
 /**
- * Short description for slugged.test.php
+ * Slugged behavior test case
+ *
+ * This test case is big. very big. You'll need 36mb or more allocated to php
+ * to be able to load it (most likely only relevant for cli users).
  *
  * Long description for slugged.test.php
  *
