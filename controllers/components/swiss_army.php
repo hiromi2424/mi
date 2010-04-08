@@ -1,10 +1,10 @@
 <?php
 /**
- * Short description for swiss_army.php
+ * Swiss army component
  *
- * Long description for swiss_army.php
+ * Various bits of common functionality wrapped up in a single component
  *
- * PHP versions 4 and 5
+ * PHP version 5
  *
  * Copyright (c) 2008, Andy Dawson
  *
@@ -34,7 +34,7 @@ class SwissArmyComponent extends Object {
  * @var string 'SwissArmy'
  * @access public
  */
-	var $name = 'SwissArmy';
+	public $name = 'SwissArmy';
 
 /**
  * components property
@@ -42,7 +42,7 @@ class SwissArmyComponent extends Object {
  * @var array
  * @access public
  */
-	var $components = array('Session', 'RequestHandler');
+	public $components = array('Session', 'RequestHandler');
 
 /**
  * settings property
@@ -50,7 +50,7 @@ class SwissArmyComponent extends Object {
  * @var array
  * @access public
  */
-	var $settings = array(
+	public $settings = array(
 		'autoLanguage' => false,
 		'autoLayout' => false,
 		'authAutoFields' => false,
@@ -79,13 +79,14 @@ class SwissArmyComponent extends Object {
 		'usingSubdomains' => null
 	);
 
+	public $webroot = '/';
 /**
  * fallBack property
  *
  * @var mixed null
  * @access private
  */
-	var $__fallBack = null;
+	private $__fallBack = null;
 
 /**
  * here property
@@ -93,7 +94,7 @@ class SwissArmyComponent extends Object {
  * @var mixed null
  * @access private
  */
-	var $__here = null;
+	private $__here = null;
 
 /**
  * history property
@@ -101,7 +102,7 @@ class SwissArmyComponent extends Object {
  * @var array
  * @access private
  */
-	var $__history = array();
+	private $__history = array();
 
 /**
  * last property
@@ -109,14 +110,14 @@ class SwissArmyComponent extends Object {
  * @var mixed null
  * @access private
  */
-	var $__last = null;
+	private $__last = null;
 /**
  * referer property
  *
  * @var mixed null
  * @access private
  */
-	var $__referer = null;
+	private $__referer = null;
 
 /**
  * loadComponent method
@@ -129,7 +130,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function loadComponent($name = 'Cookie', $config = array()) {
+	public function loadComponent($name = 'Cookie', $config = array()) {
 		if (isset($this->$name)) {
 			return;
 		}
@@ -170,17 +171,15 @@ class SwissArmyComponent extends Object {
  * 	$steps = number of steps to go back. 1 = previous screen, 2 = one before that etc.
  * 	$default = default url if no session/referer is found
  * 	$redirect = whether to redirect to the found url, or just to return it
- * 	$clean = whether to delete from the session history the found entry
  *
  * @param int $steps
  * @param string $default
  * @param bool $redirect
  * @param mixed $thread null
- * @param mixed $clean
  * @return void
  * @access public
  */
-	function back($steps = 1, $default = null, $redirect = true, $thread = null, $clean = null) {
+	public function back($steps = 1, $default = null, $redirect = true, $thread = null) {
 		$C =& $this->Controller;
 		if (!$thread) {
 			$thread = $this->_browseKey();
@@ -190,10 +189,6 @@ class SwissArmyComponent extends Object {
 		}
 		if (!empty($C->data['App']['referer']) && $this->__normalizeUrl($C->data['App']['referer']) !== $this->__here) {
 			if ($redirect) {
-				$prev = false;
-				while ($this->__history[$thread] && $prev !== $C->data['App']['referer']) {
-					$prev = array_pop($this->__history[$thread]);
-				}
 				$this->Session->write('history.' . $thread, $this->__history[$thread]);
 				return $C->redirect($C->data['App']['referer']);
 			}
@@ -203,30 +198,21 @@ class SwissArmyComponent extends Object {
 			$noDefault = true;
 			$default = $this->__fallBack;
 		}
-		if ($clean === null) {
-			if ($redirect) {
-				$clean = true;
-			} else {
-				$clean = false;
-			}
-		}
 		$prev = $this->__last;
 		$history = $this->__history[$thread];
 		$normalizedDefault = $this->__normalizeUrl($default, true);
 		while ($steps > 0 && $history) {
-			$prev = array_pop($history);
+			if (isset($this->__history[$thread][$prev])) {
+				$prev = $this->__history[$thread][$prev];
+			}
 			$steps--;
-		}
-		if ($clean) {
-			$this->__history[$thread] = $history;
-			$this->Session->write('history.' . $thread, $history);
 		}
 		if (!$prev) {
 			$prev = $default;
 		}
 		if ($redirect) {
 			if (!empty($noDefault) && $thread !== 'norm') {
-				return $this->back($steps, $prev, $redirect, 'norm', $clean);
+				return $this->back($steps, $prev, $redirect, 'norm');
 			}
 			if (!$C) {
 				$C = new Controller();
@@ -242,21 +228,19 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function beforeRender() {
+	public function beforeRender() {
 		$C =& $this->Controller;
+
 		if (empty ($C) || !empty($C->params['requested'])) {
 			return;
 		}
-		if ($this->_storeHistory()) {
-				$thread = $this->_browseKey();
-			if ($this->__here !== end($this->__history[$thread])) {
-				$this->__history[$thread][] = $this->__here;
-				$thread = $this->_browseKey();
-				$this->_browseHistory($thread);
-				$this->Session->write('history.' . $thread, $this->__history[$thread]);
-			}
-			$this->Session->write('referer', $this->__last);
+		if ($this->_storeHistory() && $this->__here !== $this->__last) {
+			$thread = $this->_browseKey();
+			$this->_browseHistory($thread);
+			$this->__history[$thread][$this->__here] = $this->__last;
+			$this->Session->write('history.' . $thread, $this->__history[$thread]);
 		}
+		$this->Session->write('referer', $this->__last);
 		if (!isset ($C->viewVars['data'])) {
 			$C->set('data', $C->data);
 		}
@@ -286,7 +270,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function blackHole($reason = null) {
+	public function blackHole($reason = null) {
 		$C =& $this->Controller;
 		if ($reason == 'post') {
 			if (empty($C->params['url']['token'])) {
@@ -358,7 +342,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function handlePostActions() {
+	public function handlePostActions() {
 		$C =& $this->Controller;
 		if (empty($C->postActions)) {
 			return;
@@ -393,11 +377,13 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function initialize(&$C, $config = array()) {
+	public function initialize(&$C, $config = array()) {
 		if (!empty($C->params['requested'])) {
 			return;
 		}
 		$this->Controller =& $C;
+		$this->webroot = $this->Controller->webroot;
+
 		$this->settings = array_merge($this->settings, $config);
 		if ($this->settings['usingSubdomains'] === null) {
 			$cookieDomain = ini_get('session.cookie_domain');
@@ -410,23 +396,27 @@ class SwissArmyComponent extends Object {
 		if ($this->_storeHistory()) {
 			$thread = $this->_browseKey();
 			$this->__history[$thread] = (array)$this->Session->read('history.' . $thread);
+			$this->__here = $this->__normalizeUrl($C->here);
 			if (isset($C->Auth) && $C->action === 'login') {
 				$referer = $this->Session->read('Auth.redirect');
 				if ($referer) {
-				   	if ($referer !== '/' && end($this->__history[$thread]) !== $referer) {
-						$this->__history[$thread][] = $referer;
+					if (empty($this->__history[$thread][$this->__here]) ||
+						$this->__history[$thread][$this->__here] !== $referer) {
+						$this->__history[$thread][$this->__here] = $referer;
 					}
 				}
 			}
-			$this->__last = end($this->__history[$thread]);
-			$this->__here = $this->__normalizeUrl(preg_replace('@^' . $C->webroot . '@', '/', $C->here));
 			$this->__referer = $C->referer();
 			$this->__fallBack = $this->__normalizeUrl(array('action' => 'index'));
-			if (!$this->__last) {
+			if (isset($this->__history[$thread][$this->__here])) {
+				$this->__last = $this->__history[$thread][$this->__here];
+				if (isset($C->Auth) && $C->action === 'login') {
+					$C->Auth->loginRedirect = $this->__last;
+				}
+			} elseif ($this->__referer !== '/') {
+				$this->__last = $this->__referer;
+			} else {
 				$this->__last = $this->__fallBack;
-			}
-			if (isset($C->Auth) && $C->action === 'login') {
-				$C->Auth->loginRedirect = $this->__last;
 			}
 		}
 		$this->_autoLayout();
@@ -457,7 +447,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function startup($C) {
+	public function startup($C) {
 		if (!empty($C->params['requested'])) {
 			return;
 		}
@@ -478,7 +468,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function shutdown($C) {
+	public function shutdown($C) {
 		if (!empty($C->params['requested'])) {
 			return;
 		}
@@ -500,7 +490,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access protected
  */
-	function _autoLanguage() {
+	protected function _autoLanguage() {
 		if (!$this->settings['autoLanguage']) {
 			return;
 		}
@@ -526,7 +516,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access protected
  */
-	function _autoLayout() {
+	protected function _autoLayout() {
 		$C =& $this->Controller;
 		if (!empty($C->params['requested']) || !$this->settings['autoLayout'] || $C->layout != 'default') {
 			return;
@@ -553,7 +543,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access protected
  */
-	function _browseHistory($thread = null) {
+	protected function _browseHistory($thread = null) {
 		$C =& $this->Controller;
 		if (!$this->settings['browseHistory'] || !empty($_FORM) && empty($C->params['requested'])) {
 			return;
@@ -572,10 +562,12 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access protected
  */
-	function _browseKey() {
+	protected function _browseKey() {
+		/*
 		if (empty($this->Controller->RequestHandler) || $this->Controller->RequestHandler->isAjax()) {
 			return 'ajax';
 		}
+		 */
 		return 'norm';
 	}
 
@@ -589,7 +581,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function lookup($input = '') {
+	public function lookup($input = '') {
 		$C =& $this->Controller;
 		if (!$input) {
 			$input = $C->params['url']['q'];
@@ -624,7 +616,7 @@ class SwissArmyComponent extends Object {
  * @access public
  * @return $conditions array of conditions to apply
  */
-	function parseSearchFilter($alias = null, $mode = 'both', $ignore = array(), $filter = array()) {
+	public function parseSearchFilter($alias = null, $mode = 'both', $ignore = array(), $filter = array()) {
 		if (is_array($mode)) {
 			extract (array_merge(array('mode' => 'both'), $mode));
 		}
@@ -736,7 +728,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function redirect($url, $code, $exist, $force) {
+	public function redirect($url, $code, $exist, $force) {
 		$C =& $this->Controller;
 		if (!$C) {
 			return false;
@@ -758,7 +750,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function setDefaultPageTitle() {
+	public function setDefaultPageTitle() {
 		$C =& $this->Controller;
 		if (empty ($C) || !empty($C->params['requested'])) {
 			return;
@@ -795,7 +787,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function setFilterFlash($filters) {
+	public function setFilterFlash($filters) {
 		$C =& $this->Controller;
 		if (!$filters) {
 			$C->Session->setFlash('No filter set');
@@ -827,7 +819,7 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access public
  */
-	function setSelects($params = array()) {
+	public function setSelects($params = array()) {
 		static $run = false;
 		if ($run) {
 			return;
@@ -899,7 +891,7 @@ class SwissArmyComponent extends Object {
  * @return bool
  * @access protected
  */
-	function _storeHistory($C = null) {
+	protected function _storeHistory($C = null) {
 		if (!$C) {
 			$C = $this->Controller;
 		}
@@ -919,39 +911,34 @@ class SwissArmyComponent extends Object {
  * @return void
  * @access private
  */
-	function __normalizeUrl($url = null, $key = false) {
+	private function __normalizeUrl($url = null, $key = false) {
+		if (is_string($url) && $this->webroot !== '/') {
+			$url = preg_replace('@^' . $this->webroot . '@', '/', $url);
+		}
 		if (is_string($url) && $url && $url[0] === '/' && $this->settings['usingSubdomains']) {
 		   $url = 'http://' . env('HTTP_HOST') . $url;
 		}
 
 		if ($key && is_string($url)) {
-			return str_replace('.ajax', '', $url);
-		}
-		if (isset($this->Controller)) {
-			$webroot = $this->Controller->webroot;
-		} else {
-			$webroot = Router::url('/');
+			return $url;
 		}
 		if (class_exists('SeoComponent')) {
 			$url = SeoComponent::url($url);
 			if (!$key) {
-				if ($webroot !== '/') {
-					return preg_replace('@^' . $webroot . '@', '/', $url);
+				if ($this->webroot !== '/') {
+					return preg_replace('@^' . $this->webroot . '@', '/', $url);
 				}
-				return str_replace('.ajax', '', $url);
+				return $url;
 			}
 		}
 		if ($key) {
 			$url = Router::normalize($url);
-			if ($webroot !== '/') {
-				$url = preg_replace('@^' . $webroot . '@', '/', $url);
-			}
 		} elseif (is_array($url)) {
 			$url = Router::url($url);
 		}
-		if ($webroot !== '/') {
-			$url = preg_replace('@^' . $webroot . '@', '/', $url);
+		if ($this->webroot !== '/') {
+			$url = preg_replace('@^' . $this->webroot . '@', '/', $url);
 		}
-		return str_replace('.ajax', '', $url);
+		return $url;
 	}
 }
