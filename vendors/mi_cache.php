@@ -368,7 +368,10 @@ class MiCache extends Object {
  * @access public
  */
 	public static function setting($id = '', $aroId = null) {
-		/* Experiment - Is it faster to internally cache settings on first request
+		/* Experiment - Is it faster to internally cache settings on first request 
+		   Load the top level setting when the first request is made - and thereafter refer to the 
+		   internal (per request) cache
+		 */
 		if ($pos = strpos($id, '.')) {
 			$keys = explode('.', $id);
 			$mainId = array_shift($keys);
@@ -391,7 +394,7 @@ class MiCache extends Object {
 			}
 			return $return;
 		}
-		*/
+		/* Experiment End */
 
 		if (MiCache::$setting === null) {
 			MiCache::config();
