@@ -93,6 +93,7 @@ class MiCache extends Object {
 	public static $defaultSettings = array(
 		'name' => 'mi_cache',
 		'engine' => 'MiFile',
+		'probability' => 98765432123456789,
 		'duration' => '+1 year',
 		'prefix' => null,
 		'path' => 'data/',
@@ -100,6 +101,8 @@ class MiCache extends Object {
 		'dirLevels' => 2,
 		'dirLength' => 1
 	);
+	
+	protected static $_appSettingCache = array();
 
 /**
  * config method
@@ -282,13 +285,24 @@ class MiCache extends Object {
 		$cacheKey = MiCache::key(func_get_args());
 		$return = MiCache::_read($cacheKey, MiCache::$setting);
 		if ($return !== null && !Configure::read('Cache.disable')) {
+			if ($return === '_NULL_') {
+				return null;
+			} elseif ($return === '_EMPTY_') {
+				return '';
+			}
 			return $return;
 		}
 		if ($func === 'find') {
 			$params[1]['miCache'] = 'cacheRequest';
 		}
-		$return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
-		MiCache::write($cacheKey, $return, MiCache::$setting);
+		$_return = $return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
+		if ($_return === null) {
+			$_return === '_NULL_';
+		} elseif ($_return === '') {
+			$_return = '_EMPTY_';
+		}
+
+		MiCache::write($cacheKey, $_return, MiCache::$setting);
 		return $return;
 	}
 
@@ -353,25 +367,55 @@ class MiCache extends Object {
  * @return void
  * @access public
  */
-	public static function setting($cacheKey = '', $aroId = null) {
+	public static function setting($id = '', $aroId = null) {
+		/* Experiment - Is it faster to internally cache settings on first request
+		if ($pos = strpos($id, '.')) {
+			$keys = explode('.', $id);
+			$mainId = array_shift($keys);
+			if (!array_key_exists($aroId . '_' . $mainId, MiCache::$_appSettingCache)) {
+				MiCache::$_appSettingCache[$aroId . '_' . $mainId] = MiCache::setting($mainId, $aroId);
+			}
+			$array = MiCache::$_appSettingCache[$aroId . '_' . $mainId];
+			$j = count($keys);
+			$return = null;
+			if (is_array($array)) {
+				foreach($keys as $i => $key) {
+					if (!array_key_exists($key, $array)) {
+						break;
+					}
+					$array = $array[$key];
+				}
+				if ($i == $j - 1) {
+					$return = $array;
+				}
+			}
+			return $return;
+		}
+		*/
+
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
 
-		$aroPrefix = '';
-		if ($aroId) {
-			$aroPrefix = $aroId . '-';
-		}
-		$return = MiCache::_read($aroPrefix . $cacheKey, MiCache::$setting);
-		if ($return !== null) {
+		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
+		$return = MiCache::_read($cacheKey, MiCache::$setting);
+		if ($return !== null && !Configure::read('Cache.disable')) {
+			if ($return === '_NULL_') {
+				return null;
+			} elseif ($return === '_EMPTY_') {
+				return '';
+			}	
 			return $return;
 		}
-		if ($Inst = MiCache::_init('MiSettings.Setting')) {
-			$return = $Inst->data($cacheKey, $aroId);
-			if ($return === null) {
-				$return = Configure::read($cacheKey);
-			}
-			MiCache::write('_' . $aroPrefix . $cacheKey, $return, MiCache::$setting);
+		$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
+		if ($return === null) {
+			$_return = $return = Configure::read($id);
+			if ($_return === null) {
+				$_return = '_NULL_';
+			} elseif ($_return === '') {
+				$_return = '_EMPTY_';
+			}	
+			MiCache::write($cacheKey, $_return, MiCache::$setting);
 		}
 		return $return;
 	}
@@ -394,6 +438,11 @@ class MiCache extends Object {
 		}
 		$settings = MiCache::$settings[$setting];
 		$path = dirname($settings['path'] . $settings['prefix'] . $cacheKey);
+		if ($data === null) {
+			$data = '_NULL_';
+		} elseif ($data === '') {
+			$data = '_EMPTY_';
+		}
 		if (MiCache::_createDir($path)) {
 			return Cache::write($cacheKey, $data, $setting);
 		}
@@ -442,18 +491,18 @@ class MiCache extends Object {
 		}
 		$_this = Cache::getInstance();
 		$settings = $_this->settings();
-		if (empty($settings['engine']) || empty($_this->_Engine[$settings['engine']])) {
+		if (empty($settings['name']) || empty($_this->_engines[$settings['name']])) {
 			return null;
 		}
 
-		if (!$key = $_this->_Engine[$settings['engine']]->key($key)) {
+		if (!$key = $_this->_engines[$settings['name']]->key($key)) {
 			return null;
 		}
-		$success = $_this->_Engine[$settings['engine']]->read($settings['prefix'] . $key);
+		$success = $_this->_engines[$settings['name']]->read($settings['prefix'] . $key);
 		if ($success !== false) {
 			return $success;
 		}
-		if (!$_this->_Engine[$settings['engine']]->_setKey($settings['prefix'] . $key)) {
+		if (!$_this->_engines[$settings['name']]->_setKey($settings['prefix'] . $key)) {
 			return null;
 		}
 		return false;
