@@ -240,8 +240,8 @@ class MiCache extends Object {
 		}
 		$cacheKey = MiCache::key($args);
 		$return = Cache::read($cacheKey, MiCache::$setting);
-		if ($return !== null && !Configure::read('Cache.disable')) {
-			return $return;
+		if ($return !== false && !Configure::read('Cache.disable')) {
+			return MiCache::_handleFalse($return);
 		}
 		if (is_string($name)) {
 			if (!class_exists($name)) {
