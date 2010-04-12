@@ -379,7 +379,7 @@ class MiCache extends Object {
 			MiCache::config();
 		}
 
-		if (MiCache::$settings['batchLoadSettings'] && strpos($id, '.')) {
+		if (MiCache::$settings[MiCache::$setting]['batchLoadSettings'] && strpos($id, '.')) {
 			$keys = explode('.', $id);
 			$mainId = array_shift($keys);
 			if (!array_key_exists($aroId . '_' . $mainId, MiCache::$_appSettingCache)) {
