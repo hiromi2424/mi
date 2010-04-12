@@ -83,7 +83,7 @@ class MiCache extends Object {
  * engine - the engine to use, defaults to MiFile which permits cachekeys to contain folders
  * duration - how long should data be cached for
  * prefix - the prefix for the filename or partial path.
- * serialize - whether to serialize the cached data or not
+ * serialize - defaults to false, otherwise  a cached false is hard to identify
  * dirLevels - how many dir levels to create
  * dirLength - how many characters of the hask-key to be used for each folder name
  * probability - the garbage collection probability - the default is to effectively disable gc
@@ -98,7 +98,7 @@ class MiCache extends Object {
 		'duration' => '+1 year',
 		'prefix' => null,
 		'path' => 'data/',
-		'serialize' => true,
+		'serialize' => false,
 		'dirLevels' => 2,
 		'dirLength' => 1,
 		'probability' => 98765432123456789,
@@ -159,7 +159,7 @@ class MiCache extends Object {
  * @return void
  * @access public
  */
-	function clear($topKey = false) {
+	public function clear($topKey = false) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -174,7 +174,7 @@ class MiCache extends Object {
  * @return void
  * @access public
  */
-	function delete() {
+	public function delete() {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -202,7 +202,7 @@ class MiCache extends Object {
  * @return void
  * @access public
  */
-	function mi($name, $func = null) {
+	public function mi($name, $func = null) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -215,6 +215,7 @@ class MiCache extends Object {
 		} else {
 			$params = array();
 		}
+
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -243,9 +244,10 @@ class MiCache extends Object {
 		}
 		$cacheKey = MiCache::key($args);
 		$return = Cache::read($cacheKey, MiCache::$setting);
-		if ($return !== false && !Configure::read('Cache.disable')) {
-			return MiCache::_handleFalse($return);
+		if ($return) {
+			return unserialize($return);
 		}
+
 		if (is_string($name)) {
 			if (!class_exists($name)) {
 				if (App::import('Vendor', $name)) {
@@ -261,7 +263,7 @@ class MiCache extends Object {
 			}
 		}
 		$return = call_user_func_array(array($name, $func), $params);
-		MiCache::write($cacheKey, $return, MiCache::$setting);
+		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
 		return $return;
 	}
 
@@ -282,7 +284,7 @@ class MiCache extends Object {
  * @return void
  * @access public
  */
-	function data($name, $func) {
+	public function data($name, $func) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -297,14 +299,15 @@ class MiCache extends Object {
 
 		$cacheKey = MiCache::key(func_get_args());
 		$return = MiCache::read($cacheKey, MiCache::$setting, false);
-		if ($return !== false && !Configure::read('Cache.disable')) {
-			return MiCache::_handleFalse($return);
+		if ($return) {
+			return unserialize($return);
 		}
+
 		if ($func === 'find') {
 			$params[1]['miCache'] = 'cacheRequest';
 		}
 		$return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
-		MiCache::write($cacheKey, $return, MiCache::$setting);
+		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
 		return $return;
 	}
 
@@ -344,11 +347,10 @@ class MiCache extends Object {
  *
  * @param mixed $cacheKey
  * @param mixed $setting null
- * @param bool $handleFalse true
  * @return void
  * @access public
  */
-	public static function read($cacheKey, $setting = null, $handleFalse = true) {
+	public static function read($cacheKey, $setting = null) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -357,8 +359,8 @@ class MiCache extends Object {
 			$setting = MiCache::$setting;
 		}
 		$return = Cache::read($cacheKey, $setting);
-		if ($handleFalse) {
-			return MiCache::_handleFalse($return);
+		if ($return) {
+			return unserialize($return);
 		}
 		return $return;
 	}
@@ -406,12 +408,13 @@ class MiCache extends Object {
 
 		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
 		$return = MiCache::read($cacheKey, MiCache::$setting, false);
-		if ($return !== false && !Configure::read('Cache.disable')) {
-			return MiCache::_handleFalse($return);
+		if ($return) {
+			return unserialize($return);
 		}
 		$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
 		if ($return === false) {
 			$return = Configure::read($id);
+			$return = serialize($return);
 			MiCache::write($cacheKey, $return, MiCache::$setting);
 		}
 		return $return;
@@ -436,7 +439,7 @@ class MiCache extends Object {
 		$settings = MiCache::$settings[$setting];
 		$path = dirname($settings['path'] . $settings['prefix'] . $cacheKey);
 		if (MiCache::_createDir($path)) {
-			$data = MiCache::_handleFalse($data, 'encode');
+			$data = serialize($data);
 			return Cache::write($cacheKey, $data, $setting);
 		}
 		return false;
@@ -472,48 +475,8 @@ class MiCache extends Object {
 		}
 		return is_writable($path);
 	}
-
-/**
- * handleFalse method
- *
- * Prevent cache misses for false values irrespective of the cache engine used
- *
- * @param mixed $return
- * @return void
- * @access protected
- */
-	protected static function _handleFalse($return, $direction = 'decode') {
-		$map = array(
-			array(null, '_NULL_'),
-			array('', '_EMPTY_'),
-			array(0, '_ZERO_'),
-			array('0', '_ZERO_'),
-			array(false, '_FALSE_'),
-			array(array(), '_ARRAY_'),
-		);
-		if ($direction === 'decode') {
-			if (is_string($return)) {
-				foreach($map as $item) {
-					if ($item[1] === $return) {
-						return $item[0];
-					}
-				}
-			}
-			return $return;
-		}
-		if ($return) {
-			return $return;
-		}
-
-		foreach($map as $item) {
-			if ($item[0] === $return) {
-				return $item[1];
-			}
-		}
-		trigger_error('MiCache::_handleFalse - unhandled false value . "' . var_export($return) . '"');
-		return $return;
-	}
 }
+
 if (!class_exists('FileEngine')) {
 	require LIBS . DS . 'cache' . DS . 'file.php';
 }
@@ -536,14 +499,16 @@ class MiFileEngine extends FileEngine {
  * @return void
  * @access public
  */
-	function init($settings = array()) {
-		parent::init(array_merge(
-			array(
-				'engine' => 'MiFile', 'path' => CACHE . 'data' . DS, 'prefix'=> '', 'lock'=> false,
-				'serialize'=> true, 'isWindows' => false
-			),
-			$settings
-		));
+	public function init($settings = array()) {
+		parent::init(array_merge(array(
+			'engine' => 'MiFile',
+			'path' => CACHE . 'data' . DS,
+			'prefix'=> '',
+			'lock'=> false,
+			'serialize'=> false,
+			'isWindows' => false
+		), $settings));
+
 		if (!isset($this->_File)) {
 			if (!class_exists('File')) {
 				require LIBS . 'file.php';
@@ -570,7 +535,7 @@ class MiFileEngine extends FileEngine {
  * @return mixed string $key or false
  * @access public
  */
-	function key($key) {
+	public function key($key) {
 		if (empty($key)) {
 			return false;
 		}
@@ -588,7 +553,7 @@ class MiFileEngine extends FileEngine {
  * @return boolean True if the cache was succesfully cleared, false otherwise
  * @access public
  */
-	function clear($topKey = null) {
+	public function clear($topKey = null) {
 		if (empty($this->_init)) {
 			return false;
 		}
@@ -610,7 +575,6 @@ class MiFileEngine extends FileEngine {
 			}
 			return;
 		}
-
 		return MiFileEngine::_exec("rm -rf $dir/*");
 	}
 
@@ -638,7 +602,7 @@ class MiFileEngine extends FileEngine {
  * @return void
  * @access private
  */
-	function __destruct() {
+	public function __destruct() {
 		Cache::getInstance()->__name = 'default';
 	}
 }

@@ -34,7 +34,7 @@ class MiTestModel {
  * @return void
  * @access public
  */
-	function returnMicrotime() {
+	public function returnMicrotime() {
 		trigger_error(__FUNCTION__);
 		return getMicrotime();
 	}
@@ -45,7 +45,7 @@ class MiTestModel {
  * @return void
  * @access public
  */
-	function returnEmptyArray() {
+	public function returnEmptyArray() {
 		trigger_error(__FUNCTION__);
 		return array();
 	}
@@ -56,7 +56,7 @@ class MiTestModel {
  * @return void
  * @access public
  */
-	function returnEmptyString() {
+	public function returnEmptyString() {
 		trigger_error(__FUNCTION__);
 		return '';
 	}
@@ -67,7 +67,7 @@ class MiTestModel {
  * @return void
  * @access public
  */
-	function returnNull() {
+	public function returnNull() {
 		trigger_error(__FUNCTION__);
 		return null;
 	}
@@ -78,7 +78,7 @@ class MiTestModel {
  * @return void
  * @access public
  */
-	function returnZero() {
+	public function returnZero() {
 		trigger_error(__FUNCTION__);
 		return 0;
 	}
@@ -89,7 +89,7 @@ class MiTestModel {
  * @return void
  * @access public
  */
-	function returnZeroString() {
+	public function returnZeroString() {
 		trigger_error(__FUNCTION__);
 		return '0';
 	}
@@ -110,7 +110,7 @@ class MiCacheTestCase extends CakeTestCase {
  * @return void
  * @access public
  */
-	function testMicrotime() {
+	public function testMicrotime() {
 		$this->expectError('returnMicrotime');
 		$time = MiCache::data('MiTestModel', 'returnMicrotime');
 		do {
@@ -123,12 +123,102 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
+ * testEmptyArray method
+ *
+ * @return void
+ * @access public
+ */
+	public function testEmptyArray() {
+		$method = 'returnEmptyArray';
+		$expected = array();
+
+		$this->expectError($method);
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+	}
+
+/**
+ * testEmptyString method
+ *
+ * @return void
+ * @access public
+ */
+	public function testEmptyString() {
+		$method = 'returnEmptyString';
+		$expected = '';
+
+		$this->expectError($method);
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+	}
+
+/**
+ * testNull method
+ *
+ * @return void
+ * @access public
+ */
+	public function testNull() {
+		$method = 'returnNull';
+		$expected = null;
+
+		$this->expectError($method);
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+	}
+
+/**
+ * testZero method
+ *
+ * @return void
+ * @access public
+ */
+	public function testZero() {
+		$method = 'returnZero';
+		$expected = 0;
+
+		$this->expectError($method);
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+	}
+
+/**
+ * testZeroString method
+ *
+ * @return void
+ * @access public
+ */
+	public function testZeroString() {
+		$method = 'returnZeroString';
+		$expected = '0';
+
+		$this->expectError($method);
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+
+		$return = MiCache::data('MiTestModel', $method);
+		$this->assertIdentical($expected, $return);
+	}
+
+/**
  * startTest method
  *
  * @return void
  * @access public
  */
-	function startTest() {
+	public function startTest() {
 		MiCache::clear();
 	}
 
@@ -138,7 +228,7 @@ class MiCacheTestCase extends CakeTestCase {
  * @return void
  * @access public
  */
-	function endTest() {
+	public function endTest() {
 		MiCache::clear();
 	}
 }
