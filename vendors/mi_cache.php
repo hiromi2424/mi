@@ -86,6 +86,8 @@ class MiCache extends Object {
  * serialize - whether to serialize the cached data or not
  * dirLevels - how many dir levels to create
  * dirLength - how many characters of the hask-key to be used for each folder name
+ * probability - the garbage collection probability - the default is to effectively disable gc
+ * batchLoadSettings - Enable batch loading of settings by default
  *
  * @var array
  * @access public
@@ -93,13 +95,14 @@ class MiCache extends Object {
 	public static $defaultSettings = array(
 		'name' => 'mi_cache',
 		'engine' => 'MiFile',
-		'probability' => 98765432123456789,
 		'duration' => '+1 year',
 		'prefix' => null,
 		'path' => 'data/',
 		'serialize' => true,
 		'dirLevels' => 2,
-		'dirLength' => 1
+		'dirLength' => 1,
+		'probability' => 98765432123456789,
+		'batchLoadSettings' => true
 	);
 
 /**
@@ -372,11 +375,11 @@ class MiCache extends Object {
  * @access public
  */
 	public static function setting($id = '', $aroId = null) {
-		/* Experiment - Is it faster to internally cache settings on first request
-		   Load the top level setting when the first request is made - and thereafter refer to the
-		   internal (per request) cache
-		 */
-		if ($pos = strpos($id, '.')) {
+		if (MiCache::$setting === null) {
+			MiCache::config();
+		}
+
+		if (MiCache::$settings['batchLoadSettings'] && strpos($id, '.')) {
 			$keys = explode('.', $id);
 			$mainId = array_shift($keys);
 			if (!array_key_exists($aroId . '_' . $mainId, MiCache::$_appSettingCache)) {
@@ -397,11 +400,6 @@ class MiCache extends Object {
 				}
 			}
 			return $return;
-		}
-		/* Experiment End */
-
-		if (MiCache::$setting === null) {
-			MiCache::config();
 		}
 
 		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
@@ -451,10 +449,16 @@ class MiCache extends Object {
  * @access protected
  */
 	static protected function _exec($cmd, &$out = null) {
+		if (!class_exists('Mi')) {
+			App::import('Vendor', 'Mi.Mi');
+		}
 		return Mi::exec($cmd, $out);
 	}
+
 /**
  * createDir method
+ *
+ * If the dir doesn't exist - create it
  *
  * @param mixed $path
  * @return void
@@ -478,17 +482,18 @@ class MiCache extends Object {
  */
 	protected static function _handleFalse($return, $direction = 'decode') {
 		$map = array(
-			null => '_NULL_',
-			'' => '_EMPTY_',
-			0 => '_ZERO_',
-			'0' => '_ZERO_',
-			false => '_FALSE_'
+			array(null, '_NULL_'),
+			array('', '_EMPTY_'),
+			array(0, '_ZERO_'),
+			array('0', '_ZERO_'),
+			array(false, '_FALSE_'),
+			array(array(), '_ARRAY_'),
 		);
 		if ($direction === 'decode') {
 			if (is_string($return)) {
-				foreach($map as $key => $value) {
-					if ($value === $return) {
-						return $key;
+				foreach($map as $item) {
+					if ($item[1] === $return) {
+						return $item[0];
 					}
 				}
 			}
@@ -497,12 +502,13 @@ class MiCache extends Object {
 		if ($return) {
 			return $return;
 		}
-		foreach($map as $key => $value) {
-			if ($key === $return) {
-				return $value;
+
+		foreach($map as $item) {
+			if ($item[0] === $return) {
+				return $item[1];
 			}
 		}
-		trigger_error('MiCache::_handleFalse - unhandled false value');
+		trigger_error('MiCache::_handleFalse - unhandled false value . "' . var_export($return) . '"');
 		return $return;
 	}
 }
@@ -624,6 +630,9 @@ class MiFileEngine extends FileEngine {
 /**
  * destruct method
  *
+ * Prevent potential cache Confusion
+ *
+ * @TODO still necessary?
  * @return void
  * @access private
  */
