@@ -101,7 +101,17 @@ class MiCache extends Object {
 		'dirLevels' => 2,
 		'dirLength' => 1
 	);
-	
+
+/**
+ * appSettingCache property
+ *
+ * The per-request settings cache. The first time Some.specific.setting is requested the top level
+ * key (Some) will be requested and stored here. This is likely to be faster than handling each
+ * setting request individuallly (less cache engine activity)
+ *
+ * @var array
+ * @access protected
+ */
 	protected static $_appSettingCache = array();
 
 /**
@@ -229,7 +239,7 @@ class MiCache extends Object {
 			}
 		}
 		$cacheKey = MiCache::key($args);
-		$return = MiCache::_read($cacheKey, MiCache::$setting);
+		$return = Cache::read($cacheKey, MiCache::$setting);
 		if ($return !== null && !Configure::read('Cache.disable')) {
 			return $return;
 		}
@@ -283,26 +293,15 @@ class MiCache extends Object {
 		}
 
 		$cacheKey = MiCache::key(func_get_args());
-		$return = MiCache::_read($cacheKey, MiCache::$setting);
-		if ($return !== null && !Configure::read('Cache.disable')) {
-			if ($return === '_NULL_') {
-				return null;
-			} elseif ($return === '_EMPTY_') {
-				return '';
-			}
-			return $return;
+		$return = MiCache::read($cacheKey, MiCache::$setting, false);
+		if ($return !== false && !Configure::read('Cache.disable')) {
+			return MiCache::_handleFalse($return);
 		}
 		if ($func === 'find') {
 			$params[1]['miCache'] = 'cacheRequest';
 		}
-		$_return = $return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
-		if ($_return === null) {
-			$_return === '_NULL_';
-		} elseif ($_return === '') {
-			$_return = '_EMPTY_';
-		}
-
-		MiCache::write($cacheKey, $_return, MiCache::$setting);
+		$return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
+		MiCache::write($cacheKey, $return, MiCache::$setting);
 		return $return;
 	}
 
@@ -342,10 +341,11 @@ class MiCache extends Object {
  *
  * @param mixed $cacheKey
  * @param mixed $setting null
+ * @param bool $handleFalse true
  * @return void
  * @access public
  */
-	public static function read($cacheKey, $setting = null) {
+	public static function read($cacheKey, $setting = null, $handleFalse = true) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -353,7 +353,11 @@ class MiCache extends Object {
 		if (!$setting) {
 			$setting = MiCache::$setting;
 		}
-		return MiCache::_read($cacheKey, $setting);
+		$return = Cache::read($cacheKey, $setting);
+		if ($handleFalse) {
+			return MiCache::_handleFalse($return);
+		}
+		return $return;
 	}
 
 /**
@@ -368,8 +372,8 @@ class MiCache extends Object {
  * @access public
  */
 	public static function setting($id = '', $aroId = null) {
-		/* Experiment - Is it faster to internally cache settings on first request 
-		   Load the top level setting when the first request is made - and thereafter refer to the 
+		/* Experiment - Is it faster to internally cache settings on first request
+		   Load the top level setting when the first request is made - and thereafter refer to the
 		   internal (per request) cache
 		 */
 		if ($pos = strpos($id, '.')) {
@@ -401,24 +405,14 @@ class MiCache extends Object {
 		}
 
 		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
-		$return = MiCache::_read($cacheKey, MiCache::$setting);
-		if ($return !== null && !Configure::read('Cache.disable')) {
-			if ($return === '_NULL_') {
-				return null;
-			} elseif ($return === '_EMPTY_') {
-				return '';
-			}	
-			return $return;
+		$return = MiCache::read($cacheKey, MiCache::$setting, false);
+		if ($return !== false && !Configure::read('Cache.disable')) {
+			return MiCache::_handleFalse($return);
 		}
 		$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
-		if ($return === null) {
-			$_return = $return = Configure::read($id);
-			if ($_return === null) {
-				$_return = '_NULL_';
-			} elseif ($_return === '') {
-				$_return = '_EMPTY_';
-			}	
-			MiCache::write($cacheKey, $_return, MiCache::$setting);
+		if ($return === false) {
+			$return = Configure::read($id);
+			MiCache::write($cacheKey, $return, MiCache::$setting);
 		}
 		return $return;
 	}
@@ -441,12 +435,8 @@ class MiCache extends Object {
 		}
 		$settings = MiCache::$settings[$setting];
 		$path = dirname($settings['path'] . $settings['prefix'] . $cacheKey);
-		if ($data === null) {
-			$data = '_NULL_';
-		} elseif ($data === '') {
-			$data = '_EMPTY_';
-		}
 		if (MiCache::_createDir($path)) {
+			$data = MiCache::_handleFalse($data, 'encode');
 			return Cache::write($cacheKey, $data, $setting);
 		}
 		return false;
@@ -478,69 +468,42 @@ class MiCache extends Object {
 	}
 
 /**
- * Read from the cache. if the read value evaluates to false check if it's false
- * Because there's nothing in the cache for that key, OR if the stored value
- * is actually false
+ * handleFalse method
  *
- * @param mixed $key
- * @param mixed $cSettings
+ * Prevent cache misses for false values irrespective of the cache engine used
+ *
+ * @param mixed $return
  * @return void
  * @access protected
  */
-	protected static function _read($key, $cSettings) {
-		$return = Cache::read($key, $cSettings);
+	protected static function _handleFalse($return, $direction = 'decode') {
+		$map = array(
+			null => '_NULL_',
+			'' => '_EMPTY_',
+			0 => '_ZERO_',
+			'0' => '_ZERO_',
+			false => '_FALSE_'
+		);
+		if ($direction === 'decode') {
+			if (is_string($return)) {
+				foreach($map as $key => $value) {
+					if ($value === $return) {
+						return $key;
+					}
+				}
+			}
+			return $return;
+		}
 		if ($return) {
 			return $return;
 		}
-		$_this = Cache::getInstance();
-		$settings = $_this->settings();
-		if (empty($settings['name']) || empty($_this->_engines[$settings['name']])) {
-			return null;
+		foreach($map as $key => $value) {
+			if ($key === $return) {
+				return $value;
+			}
 		}
-
-		if (!$key = $_this->_engines[$settings['name']]->key($key)) {
-			return null;
-		}
-		$success = $_this->_engines[$settings['name']]->read($settings['prefix'] . $key);
-		if ($success !== false) {
-			return $success;
-		}
-		if (!$_this->_engines[$settings['name']]->_setKey($settings['prefix'] . $key)) {
-			return null;
-		}
-		return false;
-	}
-
-/**
- * init method
- *
- * @param string $alias ''
- * @return void
- * @access protected
- */
-	protected static function _init($alias = '') {
-		if (!Configure::read()) {
-			return ClassRegistry::init($alias);
-		}
-		$plugin = '';
-		if (strpos($alias, '.')) {
-			list($plugin, $alias) = explode('.', $alias);
-			$plugin .= '.';
-		}
-		$table = Inflector::underscore(Inflector::pluralize($alias));
-		$Inst = ClassRegistry::init(array(
-			'alias' => $alias,
-			'class' => $plugin . $alias,
-			'table' => false
-		));
-		$db =& ConnectionManager::getDataSource($Inst->useDbConfig);
-		$sources = $db->listSources();
-		if (in_array($Inst->tablePrefix . $table, $sources)) {
-			$Inst->setSource($table);
-			return $Inst;
-		}
-		trigger_error("MiCache::_init Unable to set the source for the $plugin$alias model check that `$table` exists in the {$Inst->useDbConfig} datasource");
-		return false;
+		trigger_error('MiCache::_handleFalse - unhandled false value');
+		return $return;
 	}
 }
 if (!class_exists('FileEngine')) {
