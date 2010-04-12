@@ -636,19 +636,20 @@ class Mi {
 		$paths = Mi::_viewPaths($plugin);
 
 		$folder = Inflector::underscore($controllerName);
-		foreach ($paths as $i => &$path) {
-			if (!strpos($path, 'plugins')) {
-				unset ($paths[$i]);
-			}
-			$path .= $folder;
-		}
 
 		$files = array();
-		foreach ($paths as $path) {
+		foreach ($paths as &$path) {
 			if (!strpos($path, DS . 'view')) {
 				continue;
 			}
-			$files = Set::merge($files, Mi::files($path, null, '.*ctp'));
+			if ($plugin) {
+				if (!strpos($path, 'plugins')) {
+					unset ($paths[$i]);
+					continue;
+				}
+				$path .= $folder;
+			}
+			$files = Set::merge($files, Mi::files($path . $folder, null, '.*ctp'));
 		}
 
 		$return = array();
@@ -656,7 +657,7 @@ class Mi {
 			if ($nameOnly) {
 				$name = str_replace('.ctp', '', basename($file));
 			} else {
-				$name = preg_replace('@^.*[\\\/]views[\\\/]' . $folder . '[\\\/]@', '', $file);
+				$name = preg_replace('@^.*[\\\/]views?[\\\/]' . $folder . '[\\\/]@', '', $file);
 				$name = str_replace('.ctp', '', $name);
 			}
 			if (isset($return[$name])) {
