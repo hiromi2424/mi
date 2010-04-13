@@ -163,6 +163,11 @@ class MiCache extends Object {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
+		if ($topKey) {
+			unset(MiCache::$_appSettingCache['_' . $topKey]);
+		} else {
+			MiCache::$_appSettingCache = array();
+		}
 		Cache::clear($topKey, MiCache::$setting);
 	}
 
@@ -381,42 +386,50 @@ class MiCache extends Object {
 			MiCache::config();
 		}
 
-		if (MiCache::$settings[MiCache::$setting]['batchLoadSettings'] && strpos($id, '.')) {
-			$keys = explode('.', $id);
-			$mainId = array_shift($keys);
-
-			if (!array_key_exists($aroId . '_' . $mainId, MiCache::$_appSettingCache)) {
-				MiCache::$_appSettingCache[$aroId . '_' . $mainId] = MiCache::setting($mainId, $aroId);
-			}
-			$array = MiCache::$_appSettingCache[$aroId . '_' . $mainId];
-			$j = count($keys);
-			$return = null;
-			if (is_array($array)) {
-				foreach($keys as $i => $key) {
-					if (!array_key_exists($key, $array)) {
-						$array = null;
-						break;
+		if (MiCache::$settings[MiCache::$setting]['batchLoadSettings']) {
+		  	if (strpos($id, '.')) {
+				$keys = explode('.', $id);
+				$mainId = array_shift($keys);
+				if (!array_key_exists($aroId . '_' . $mainId, MiCache::$_appSettingCache)) {
+					MiCache::$_appSettingCache[$aroId . '_' . $mainId] = MiCache::setting($mainId, $aroId);
+				}
+				$array = MiCache::$_appSettingCache[$aroId . '_' . $mainId];
+				$j = count($keys);
+				$return = null;
+				if (is_array($array)) {
+					foreach($keys as $i => $key) {
+						if (!array_key_exists($key, $array)) {
+							$array = null;
+							break;
+						}
+						$array = $array[$key];
 					}
-					$array = $array[$key];
+					if ($i == $j - 1) {
+						$return = $array;
+					}
 				}
-				if ($i == $j - 1) {
-					$return = $array;
+				if ($return !== null) {
+					return $return;
 				}
 			}
+		} else {
+		  	if (strpos($id, '.')) {
+				$keys = explode('.', $id, 1);
+				$mainId = array_shift($keys);
+				if (array_key_exists($aroId . '_' . $mainId, MiCache::$_appSettingCache) &&
+					array_key_exists($id, MiCache::$_appSettingCache[$aroId . '_' . $mainId])) {
+					return MiCache::$_appSettingCache[$aroId . '_' . $mainId][$id];
+				}
+			}
+		}
+
+		$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
+		if ($return !== null) {
 			return $return;
 		}
-
+		$return = Configure::read($id);
 		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
-		$return = MiCache::read($cacheKey, MiCache::$setting, false);
-		if ($return) {
-			return unserialize($return);
-		}
-		$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
-		if ($return === false) {
-			$return = Configure::read($id);
-			$return = serialize($return);
-			MiCache::write($cacheKey, $return, MiCache::$setting);
-		}
+		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
 		return $return;
 	}
 
