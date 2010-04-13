@@ -346,10 +346,12 @@ if (is_array($validator['rule'])) {
 		$recursive = -1;
 
 		if ($term) {
-			$conditions['OR'] = array(
-				$Model->alias . '.' . $Model->primaryKey . ' LIKE' => $term . '%',
-				$Model->alias . '.' . $Model->displayField . ' LIKE' => $term . '%',
-			);
+			if ($term !== '*') {
+				$conditions['OR'] = array(
+					$Model->alias . '.' . $Model->primaryKey . ' LIKE' => $term . '%',
+					$Model->alias . '.' . $Model->displayField . ' LIKE' => $term . '%',
+				);
+			}
 		}
 
 		if (!empty($params['page'])) {
