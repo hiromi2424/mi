@@ -233,7 +233,6 @@ class MiCache extends Object {
 			}
 			$func = $name;
 			$name = 'Mi';
-			include_once(dirname(__FILE__) . DS . 'mi.php');
 			$args = array($name, $func, $params);
 		} else {
 			$args = func_get_args();
@@ -268,7 +267,7 @@ class MiCache extends Object {
 			}
 		}
 		$return = call_user_func_array(array($name, $func), $params);
-		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
+		MiCache::write($cacheKey, $return, MiCache::$setting);
 		return $return;
 	}
 
