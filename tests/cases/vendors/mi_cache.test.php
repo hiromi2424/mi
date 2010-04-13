@@ -105,6 +105,17 @@ class MiTestModel {
 class MiCacheTestCase extends CakeTestCase {
 
 /**
+ * fixtures property
+ *
+ * @var array
+ * @access public
+ */
+	public $fixtures = array(
+		'plugin.mi.site',
+		'plugin.mi_settings.setting'
+	);
+
+/**
  * testDataMicrotime method
  *
  * @return void
