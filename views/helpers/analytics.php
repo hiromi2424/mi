@@ -103,7 +103,7 @@ class AnalyticsHelper extends AppHelper {
 		$this->View =& ClassRegistry::getObject('View');
 		$code = $this->_codeBlock($this->settings['code'], $this->settings['domain']);
 		if ($code) {
-			$this->View->output = preg_replace('@</body>@', $code . '</body>', $this->View->output);
+			$this->View->output = str_replace('</body>', $code . '</body>', $this->View->output);
 		}
 	}
 
