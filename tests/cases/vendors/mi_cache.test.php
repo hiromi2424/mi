@@ -105,12 +105,12 @@ class MiTestModel {
 class MiCacheTestCase extends CakeTestCase {
 
 /**
- * testMicrotime method
+ * testDataMicrotime method
  *
  * @return void
  * @access public
  */
-	public function testMicrotime() {
+	public function testDataMicrotime() {
 		$this->expectError('returnMicrotime');
 		$time = MiCache::data('MiTestModel', 'returnMicrotime');
 		do {
@@ -123,12 +123,12 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
- * testEmptyArray method
+ * testDataEmptyArray method
  *
  * @return void
  * @access public
  */
-	public function testEmptyArray() {
+	public function testDataEmptyArray() {
 		$method = 'returnEmptyArray';
 		$expected = array();
 
@@ -141,12 +141,12 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
- * testEmptyString method
+ * testDataEmptyString method
  *
  * @return void
  * @access public
  */
-	public function testEmptyString() {
+	public function testDataEmptyString() {
 		$method = 'returnEmptyString';
 		$expected = '';
 
@@ -159,12 +159,12 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
- * testNull method
+ * testDataNull method
  *
  * @return void
  * @access public
  */
-	public function testNull() {
+	public function testDataNull() {
 		$method = 'returnNull';
 		$expected = null;
 
@@ -177,12 +177,12 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
- * testZero method
+ * testDataZero method
  *
  * @return void
  * @access public
  */
-	public function testZero() {
+	public function testDataZero() {
 		$method = 'returnZero';
 		$expected = 0;
 
@@ -195,12 +195,12 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
- * testZeroString method
+ * testDataZeroString method
  *
  * @return void
  * @access public
  */
-	public function testZeroString() {
+	public function testDataZeroString() {
 		$method = 'returnZeroString';
 		$expected = '0';
 
@@ -213,12 +213,12 @@ class MiCacheTestCase extends CakeTestCase {
 	}
 
 /**
- * testCacheDisabled method
+ * testDataCacheDisabled method
  *
  * @return void
  * @access public
  */
-	public function testCacheDisabled() {
+	public function testDataCacheDisabled() {
 		$cacheDisabled = Configure::read('Cache.disable');
 		Configure::write('Cache.disable', true);
 
