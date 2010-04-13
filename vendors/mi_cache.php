@@ -450,8 +450,42 @@ class MiCache extends Object {
 		}
 		$settings = MiCache::$settings[$setting];
 		$path = dirname($settings['path'] . $settings['prefix'] . $cacheKey);
-		$data = serialize($data);
-		return Cache::write($cacheKey, $data, $setting);
+		if (MiCache::_createDir($path)) {
+			$data = serialize($data);
+			return Cache::write($cacheKey, $data, $setting);
+		}
+		return false;
+	}
+
+/**
+ * exec method
+ *
+ * @param mixed $cmd
+ * @param mixed $out null
+ * @return void
+ * @access protected
+ */
+	static protected function _exec($cmd, &$out = null) {
+		if (!class_exists('Mi')) {
+			App::import('Vendor', 'Mi.Mi');
+		}
+		return Mi::exec($cmd, $out);
+	}
+
+/**
+ * createDir method
+ *
+ * If the dir doesn't exist - create it
+ *
+ * @param mixed $path
+ * @return void
+ * @access protected
+ */
+	protected static function _createDir($path) {
+		if (!is_dir($path)) {
+			new Folder($path, true);
+		}
+		return is_writable($path);
 	}
 }
 
@@ -554,38 +588,6 @@ class MiFileEngine extends FileEngine {
 			return;
 		}
 		return MiFileEngine::_exec("rm -rf $dir/*");
-	}
-
-/**
- * write method
- *
- * @param mixed $key
- * @param mixed $data
- * @param mixed $duration
- * @return void
- * @access public
- */
-	public function write($key, &$data, $duration) {
-		$path = dirname($this->settings['path'] . $this->settings['prefix'] . $key);
-		if ($this->_createDir($path)) {
-			return parent::write($key, $data, $duration);
-		}
-		return false;
-	}
-/**
- * createDir method
- *
- * If the dir doesn't exist - create it
- *
- * @param mixed $path
- * @return void
- * @access protected
- */
-	protected static function _createDir($path) {
-		if (!is_dir($path)) {
-			new Folder($path, true);
-		}
-		return is_writable($path);
 	}
 
 /**
