@@ -504,14 +504,18 @@ class MiCacheTestCase extends CakeTestCase {
 
 		$expected = array(
 			$path . 'one' . DS . 'empty.php',
+			$path . 'three' . DS . 'empty.php',
 			$path . 'two' . DS . 'empty.php',
-			$path . 'three' . DS . 'empty.php'
 		);
 		$return = MiCache::mi('files', $path);
+		sort($return);
+
 		$this->assertIdentical($return, $expected);
 
 		$Folder->delete();
 		$return = MiCache::mi('files', $path);
+		sort($return);
+
 		$this->assertIdentical($return, $expected);
 	}
 
@@ -522,6 +526,8 @@ class MiCacheTestCase extends CakeTestCase {
  * @access public
  */
 	public function startTest() {
+		Configure::write('Cache.disable', false);
+
 		$this->_Configure = $Configure = Configure::getInstance();
 		$Configure = new Configure();
 		MiCache::clear();

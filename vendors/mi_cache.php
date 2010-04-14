@@ -452,8 +452,7 @@ class MiCache extends Object {
 		$path = dirname($settings['path'] . $settings['prefix'] . $cacheKey);
 
 		if (MiCache::_createDir($path)) {
-			$data = serialize($data);
-			return Cache::write($cacheKey, $data, $setting);
+			return Cache::write($cacheKey, serialize($data), $setting);
 		}
 		return false;
 	}
