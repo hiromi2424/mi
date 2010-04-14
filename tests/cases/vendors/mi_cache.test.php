@@ -118,6 +118,10 @@ class MiCacheTestCase extends CakeTestCase {
 /**
  * testDataMicrotime method
  *
+ * Get the microtime via MiCache (to populate the cache)
+ * run in a loop direclty calling the method until the time changes
+ * Get the microtime again and ensure its the same as the cached value
+ *
  * @return void
  * @access public
  */

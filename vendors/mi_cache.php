@@ -450,6 +450,7 @@ class MiCache extends Object {
 		}
 		$settings = MiCache::$settings[$setting];
 		$path = dirname($settings['path'] . $settings['prefix'] . $cacheKey);
+
 		if (MiCache::_createDir($path)) {
 			$data = serialize($data);
 			return Cache::write($cacheKey, $data, $setting);
@@ -520,7 +521,6 @@ class MiFileEngine extends FileEngine {
 			'serialize'=> false,
 			'isWindows' => false
 		), $settings));
-
 		if (!isset($this->_File)) {
 			if (!class_exists('File')) {
 				require LIBS . 'file.php';
