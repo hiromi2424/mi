@@ -189,6 +189,10 @@ class MiDbShell extends Shell {
 			$this->settings['table'] = implode(' ', array_unique($tables));
 		}
 
+		if (!empty($this->params['tables'])) {
+			$this->params['table'] = str_replace(',', ' ', $this->params['tables']);
+		}
+
 		$extraParams = array();
 		foreach($this->params as $k => $v) {
 			if ($k[0] !== '-') {
