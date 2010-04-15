@@ -460,29 +460,6 @@ class SwissArmyComponent extends Object {
 	}
 
 /**
- * shutdown method
- * If css, js and images are being served from a different subdomain, auto-correct any links in content
- * or code that don't point at it
- *
- * @param mixed $C
- * @return void
- * @access public
- */
-	public function shutdown($C) {
-		if (!empty($C->params['requested'])) {
-			return;
-		}
-		$assetHost = Configure::read('MiCompressor.host');
-		if ($assetHost) {
-			$C->output = preg_replace(
-				'@src=([\'"])/@',
-				'src=\1' . $assetHost . '/',
-				$C->output
-			);
-		}
-	}
-
-/**
  * autoLanguage method
  *
  * Set $controller->params['lang'] language if appropriate
