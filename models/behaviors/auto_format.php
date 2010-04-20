@@ -221,18 +221,15 @@ class AutoFormatBehavior extends ModelBehavior {
 			}
 		}
 		$string = htmlspecialchars($string);
-		$string = explode("\r\n", $string);
-		foreach ($string as $i => $para) {
+		$string = explode("\n", $string);
+		foreach ($string as $i => &$para) {
 			$para = preg_replace("/^[\r\t\n ]*|[\r\t\n ]*$/", '', $para);
-			$para = trim($para);
-			if (!$para) {
-				unset ($string[$i]);
-			}
 		}
 		if (!$string) {
 			return '';
 		}
 		$string = '<p>' . implode($string, "</p>\n<p>") . '</p>';
+		$string = str_replace('<p></p>', '<br />', $string);;
 		if ($checkForPhp && $codeSegments[1]) {
 			foreach ($codeSegments[1] as $id => $text) {
 				$string = str_replace('{{{segment' . $id . '}}}', '<pre>' . htmlspecialchars($text) . '</pre>', $string);

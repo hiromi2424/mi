@@ -115,7 +115,15 @@ class MiCache extends Object {
  * @var array
  * @access protected
  */
-	protected static $_appSettingCache = array();
+	static protected $_appSettingCache = array();
+
+/**
+ * hasDb property
+ *
+ * @var mixed null
+ * @access protected
+ */
+	static protected $_hasDb = null;
 
 /**
  * config method
@@ -307,6 +315,10 @@ class MiCache extends Object {
 			return unserialize($return);
 		}
 
+		if (!MiCache::_hasDb()) {
+			return null;
+		}
+
 		if ($func === 'find') {
 			$params[1]['miCache'] = 'cacheRequest';
 		}
@@ -481,11 +493,28 @@ class MiCache extends Object {
  * @return void
  * @access protected
  */
-	protected static function _createDir($path) {
+	static protected function _createDir($path) {
 		if (!is_dir($path)) {
 			new Folder($path, true);
 		}
 		return is_writable($path);
+	}
+
+/**
+ * hasDb method
+ *
+ * @return void
+ * @access protected
+ */
+	static protected function _hasDb() {
+		if (MiCache::$_hasDb === null) {
+			MiCache::$_hasDb = file_exists(CONFIGS . 'database.php');
+		}
+
+		if (MiCache::$_hasDb) {
+			return true;
+		}
+		return false;
 	}
 }
 
