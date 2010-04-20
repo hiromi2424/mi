@@ -282,12 +282,15 @@ class SwissArmyComponent extends Object {
 			   $url = 'http://' . env('HTTP_HOST') . $url;
 			}
 			$hash = Security::hash($url, null, true);
+
 			$submittedHash = preg_replace('@\..*$@', '', $C->params['url']['token']);
 			if ($hash !== $submittedHash) {
 				return $this->back();
 			}
-
 			if ($C->action === 'admin_delete') {
+				if (!$C->{$C->modelClass}->id && !empty($C->params['pass'][0])) {
+					$C->{$C->modelClass}->id = $C->params['pass'][0];
+				}
 				if (!$C->{$C->modelClass}->exists()) {
 					return $this->back();
 				}
