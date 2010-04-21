@@ -470,7 +470,7 @@ class MiCache extends Object {
 			MiCache::config();
 		}
 
-		if (!$setting) {
+		if (!$setting || !isset(MiCache::$settings[$setting])) {
 			$setting = MiCache::$setting;
 		}
 		$settings = MiCache::$settings[$setting];
