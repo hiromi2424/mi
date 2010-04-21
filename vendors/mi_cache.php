@@ -521,9 +521,8 @@ class MiCache extends Object {
  */
 	static protected function _hasDb() {
 		if (MiCache::$_hasDb === null) {
-			MiCache::$_hasDb = class_exists('DATABASE_CONFIG');
+			MiCache::$_hasDb = file_exists(CONFIGS . 'database.php');
 		}
-
 		if (MiCache::$_hasDb) {
 			return true;
 		}
