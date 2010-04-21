@@ -126,6 +126,14 @@ class MiCache extends Object {
 	static protected $_hasDb = null;
 
 /**
+ * hasDb property
+ *
+ * @var mixed null
+ * @access protected
+ */
+	static protected $_hasSettingsTable = null;
+
+/**
  * config method
  *
  * Configure the cache engine
@@ -434,10 +442,13 @@ class MiCache extends Object {
 			}
 		}
 
-		$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
-		if ($return !== null) {
-			return $return;
+		if (MiCache::_hasSettingsTable()) {
+			$return = MiCache::data('MiSettings.Setting', 'data', $id, $aroId);
+			if ($return !== null) {
+				return $return;
+			}
 		}
+
 		$return = Configure::read($id);
 		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
 		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
@@ -508,13 +519,20 @@ class MiCache extends Object {
  */
 	static protected function _hasDb() {
 		if (MiCache::$_hasDb === null) {
-			MiCache::$_hasDb = file_exists(CONFIGS . 'database.php');
+			MiCache::$_hasDb = class_exists('DATABASE_CONFIG');
 		}
 
 		if (MiCache::$_hasDb) {
 			return true;
 		}
 		return false;
+	}
+
+	static protected function _hasSettingsTable() {
+		if (MiCache::$_hasSettingsTable === null) {
+			MiCache::$_hasSettingsTable = !Configure::read('MiSettings.noDb');
+		}
+		return MiCache::$_hasSettingsTable;
 	}
 }
 
