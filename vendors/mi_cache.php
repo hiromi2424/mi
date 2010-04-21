@@ -118,7 +118,7 @@ class MiCache extends Object {
 	static protected $_appSettingCache = array();
 
 /**
- * hasDb property
+ * Do we have a database?
  *
  * @var mixed null
  * @access protected
@@ -126,7 +126,9 @@ class MiCache extends Object {
 	static protected $_hasDb = null;
 
 /**
- * hasDb property
+ * Do we have a settings table to refer to?
+ *
+ * If not put Configure::write('MiSettings.noDb', true) in your bootstrap so this class doesn't try and load the model
  *
  * @var mixed null
  * @access protected
@@ -512,7 +514,7 @@ class MiCache extends Object {
 	}
 
 /**
- * hasDb method
+ * Have we got a database?
  *
  * @return void
  * @access protected
@@ -528,6 +530,14 @@ class MiCache extends Object {
 		return false;
 	}
 
+/**
+ * Do we have a settings table?
+ *
+ * If not put Configure::write('MiSettings.noDb', true) in your bootstrap
+ *
+ * @return void
+ * @access protected
+ */
 	static protected function _hasSettingsTable() {
 		if (MiCache::$_hasSettingsTable === null) {
 			MiCache::$_hasSettingsTable = !Configure::read('MiSettings.noDb');
