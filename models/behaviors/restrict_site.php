@@ -84,6 +84,7 @@ class RestrictSiteBehavior extends ModelBehavior {
 		if (!$siteId) {
 			return $queryData;
 		}
+		$queryData['conditions'] = (array)$queryData['conditions'];
 		$queryData['conditions'][$Model->alias . '.site_id'] = $siteId;
 		return $queryData;
 	}
