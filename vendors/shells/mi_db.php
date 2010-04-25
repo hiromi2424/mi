@@ -18,7 +18,7 @@
  * @link          www.ad7six.com
  * @package       mi
  * @subpackage    mi.vendors.shells
- * @since         v 1.0 (30-Sep-2009)
+ * @since         30-Sep-2009
  * @license       http://www.opensource.org/licenses/mit-license.php The MIT License
  */
 App::import('Model', 'ConnectionManager');
@@ -80,6 +80,8 @@ class MiDbShell extends Shell {
 		'-dry-run' => false,
 		'-quiet' => false,
 		'-interactive' => true,
+		'-from' => 'default',
+		'-to' => 'default',
 		'extraOptions' => '',
 		'commands' => array(),
 	);
@@ -105,6 +107,9 @@ class MiDbShell extends Shell {
 			'description' => 'Don\'t ask questions - just do it (risky)',
 			'short' => 'f'
 		),
+		'-from' => array(
+			'description' => 'Source connection'
+		),
 		'-dry-run' => array(
 			'description' => 'Go through the motions but don\'t commit results (safe - @TODO WHEN implemented)',
 			'short' => 'n'
@@ -113,26 +118,13 @@ class MiDbShell extends Shell {
 			'description' => 'Supress none-error output',
 			'short' => 'q'
 		),
+		'-to' => array(
+			'description' => 'Target connection'
+		),
 		'-verbose' => array(
 			'description' => 'Display more details - can be specified as a numeric value',
 			'short' => 'v'
 		)
-	);
-
-/**
- * shortOptions property
- *
- * @var array
- * @access protected
- */
-	protected $_shortOptions = array(
-		// 'd' => '-debug', Hidden, but should exist/be supported?
-		'h' => '-help',
-		'i' => '-interactive',
-		'f' => '-force',
-		'n' => '-dry-run',
-		'q' => '-quiet',
-		'v' => '-verbose',
 	);
 
 /**
@@ -175,16 +167,18 @@ class MiDbShell extends Shell {
 		$this->out($this->name . ' Shell. Version ' . $this->_version);
 		switch ($this->command) {
 			case 'copy':
-				$this->out('MiDb copy.');
 				$this->out('Move data from one db connection to another');
-				$this->hr();
-				$this->out('Usage: cake ' . $this->name . ' copy fromThisConnection toThisConnection');
-				$this->out('       cake ' . $this->name . ' copy -from fromThisConnection -to toThisConnection');
-				$this->out('       cake ' . $this->name . ' copy -from fromThisConnection -to toThisConnection -table justthistable');
 				$this->out('');
 				$this->out('The copy command allows you to copy a whole db from one connection to another');
 				$this->out('It issues a dump (which includes drop and create tables) and pipes it directly');
 				$this->out('   to the import of the target connection');
+				$this->out('');
+				$this->out('Usage: cake ' . $this->name . ' copy fromConnection fromConnection');
+				$this->out('  or   cake ' . $this->name . ' copy --from=fromConnection --to=fromConnection');
+				$this->out('');
+				$this->out('Options');
+				$this->out('    --from=connection         Source connection');
+				$this->out('    --to=connection           Target connection');
 				break;
 			case 'init':
 				$this->out('Initialize your database');
@@ -198,7 +192,6 @@ class MiDbShell extends Shell {
 				$this->out('    --file=file.sql           If the file isn\'t specified config/schema/default.sql');
 				$this->out('                              will be loaded if it exists, otherwise the default');
 				$this->out('                              schema from mi_development (if found) will be loaded');
-				$this->out('');
 				break;
 			default:
 				foreach ($methods as $method) {
@@ -220,19 +213,25 @@ class MiDbShell extends Shell {
 				}
 				$this->out('');
 				$this->out('Options');
-				foreach($this->_shortOptions as $short => $long) {
-					if (!empty($this->_commandOptions[$long]['description'])) {
-						$description = $this->_commandOptions[$long]['description'];'<description>';
+				foreach($this->_commandOptions as $long => $details) {
+					if (!empty($details['description'])) {
+						$description = $details['description'];
 					} else {
 						$description = '<description>';
 					}
-					$this->out(str_pad(" -$short, -$long ", 30) . $description);
+					if (!empty($details['short'])) {
+						$short = '-' . $details['short'] . ',';
+					} else {
+						$short = '   ';
+					}
+					$this->out(str_pad(" $short -$long ", 30) . $description);
 				}
 				$this->out('');
 				$this->out('Append --help (or -h) to get help for specific help for that function. e.g.:');
 				$this->out("cake {$this->_name} example foo bar --help");
-
 		}
+		$this->out('');
+		$this->out("options not in the above list are passed directly to the called command");
 		$this->hr();
 	}
 
@@ -298,22 +297,6 @@ class MiDbShell extends Shell {
 			$this->settings['-table'] = implode(' ', array_unique($tables));
 		}
 
-		/* @TODO
-		$extraParams = array();
-		foreach($this->params as $k => $v) {
-			if ($k[0] !== '-') {
-				continue;
-			}
-			$k = '-' . $k;
-			if ($v != 1) {
-				$k .= '=' . $v;
-			}
-			$extraParams[] = $k;
-		}
-		if ($extraParams) {
-			$this->settings['extraOptions'] = implode($extraParams, ' ');
-		}
-		 */
 		if (empty($this->_commands['mysqli'])) {
 			$this->_commands['mysqli'] = $this->_commands['mysql'];
 		}
@@ -458,26 +441,21 @@ class MiDbShell extends Shell {
  * @access public
  */
 	public function copy() {
-		$from = $to = null;
-		if (!empty($this->params['from'])) {
-			$from = $this->params['from'];
+		$from = $this->settings['-from'];
+		$to = $this->settings['-to'];
+
+		if (count($this->args) >= 2) {
+			list($from, $to) = $this->args;
 		}
-		if (!empty($this->params['to'])) {
-			$to = $this->params['to'];
-		}
-		if (empty($from) || empty($to)) {
-			if (count($this->args) >= 2) {
-				list($from, $to) = $this->args;
-			} else {
-				return $this->help();
-			}
+		if ($from === $to) {
+			return $this->help();
 		}
 
 		$fromDb =& ConnectionManager::getDataSource($from);
 		$name = $fromDb->config['driver'];
 		$command = 'dump';
 		// Allow for filters in the future
-		$this->_commandNameSuffix($command, 'complete', $this->settings);
+		$this->_commandNameSuffix('dump', 'complete', $this->settings);
 		$command = $this->settings['commands'][$name][$command];
 		$dump = $this->_command($command, $fromDb->config, $name, $this->settings);
 
@@ -490,6 +468,7 @@ class MiDbShell extends Shell {
 
 		$name = $toDb->config['driver'];
 		$command = str_replace(' :-table < :file', '', $this->settings['commands'][$name]['import']);
+
 		$import = $this->_command($command, $toDb->config, $name, $this->settings);
 
 		$command = "$dump | $import";
@@ -663,9 +642,14 @@ class MiDbShell extends Shell {
  */
 	protected function _out($command, $settings = array()) {
 		$settings = array_merge($this->settings, $settings);
-		if (!empty($settings['-debug'])) {
+
+		if (!empty($settings['-dry-run']) || !empty($settings['debug'])) {
 			$this->out($command);
 		}
+		if (!empty($settings['-dry-run']) ) {
+			return;
+		}
+
 		if (!empty($settings['return'])) {
 			$this->_exec($command, $return);
 			return $return;
@@ -747,6 +731,7 @@ class MiDbShell extends Shell {
  * allow more typical --option=value syntax
  * allow arrays to be specified as comma seperated lists:
  *  --option=this,that,other becomes array('this', 'that', 'other')
+ * populate extraParams with any 'alien' parameters
  *
  * @return void
  * @access protected
@@ -776,6 +761,30 @@ class MiDbShell extends Shell {
 			if (is_string($value) && strpos($value, ',')) {
 				$value = explode(',', $value);
 			}
+		}
+		$diffTo = array(
+			'app' => 'default',
+			'root' => 'default',
+			'webroot' => 'default',
+			'working' => 'default',
+		);
+		$diffTo = array_merge($diffTo, $shortOptions, $this->_commandOptions);
+		$this->settings['extraOptions'] = array_diff_key($this->params, $diffTo);
+
+		if ($this->settings['extraOptions']) {
+			$extraParams = array();
+			foreach($this->settings['extraOptions'] as $option => $val) {
+				if ($val === true) {
+					$extraParams[] = '-' . $option;
+					continue;
+				}
+				if (is_array($val)) {
+					$val = implode($val, ',');
+				}
+				$segment = '-' . $option . '=' . $val;
+				$extraParams[] = $segment;
+			}
+			$this->settings['extraOptions'] = implode($extraParams, ' ');
 		}
 	}
 
