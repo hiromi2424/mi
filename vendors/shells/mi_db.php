@@ -144,6 +144,7 @@ class MiDbShell extends Shell {
 	protected $_commands = array(
 		'mysql' => array(
 			'connection' => '--host=:host --port=:port --user=:login --password=:password --default-character-set=:encoding',
+			'connect' => 'mysql :connection :database',
 			'copy' => ':export | :import',
 			'standardOptions' => '--set-charset -e',
 			'dump' => 'mysqldump :connection -d -R :standardOptions :extraOptions :database :-table',
@@ -497,6 +498,25 @@ class MiDbShell extends Shell {
 			$this->out("Copying tables from $from to $to");
 		}
 		return $this->_out($command, $this->settings);
+	}
+
+	public function connectString() {
+		$settings = $this->settings;
+
+		$commandName = 'connect';
+
+		$db =& ConnectionManager::getDataSource($settings['-connection']);
+		$name = $this->db->config['driver'];
+
+		$config = $db->config;
+
+		if (!isset($settings['commands'][$name][$commandName])) {
+			return $this->err("no command defined for $commandName");
+		}
+		$command = $settings['commands'][$name][$commandName];
+		$command = $this->_command($command, $config, $name, $settings);
+
+		$this->out($command);
 	}
 
 /**
