@@ -37,7 +37,7 @@ class MiTimeHelper extends TimeHelper {
 			$this->_jsAdded = true;
 		}
 
-		$date = date('Y-m-d H:i O', $this->fromString($dateTime));
+		$date = date('Y-m-d H:i:s O', $this->fromString($dateTime));
 		return String::insert($this->settings['relativeTime']['tag'], array_merge($options, compact('date')));
 	}
 }
