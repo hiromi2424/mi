@@ -81,7 +81,7 @@ class SeoComponent extends Object {
  * @access public
  */
 	function initialize(&$Controller, $config = array()) {
-		trigger_error('SeoComponent::initialize has been moved to https://AD7six@github.com/AD7six/mi_seo.git');
+		trigger_error('SeoComponent::initialize has been moved to http://github.com/AD7six/mi_seo');
 		$this->settings = array_merge($this->settings, $config);
 		$this->Controller =& $Controller;
 		$this->params =& $Controller->params;

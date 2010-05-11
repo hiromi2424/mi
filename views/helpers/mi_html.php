@@ -216,7 +216,7 @@ class MiHtmlHelper extends HtmlHelper {
 				}
 			}
 		}
-		return parent::link($title, $url, $htmlAttributes, $confirmMessage, $escapeTitle);
+		return parent::link($title, $url, $htmlAttributes, $confirmMessage);
 	}
 
 /**
