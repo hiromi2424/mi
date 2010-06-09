@@ -444,7 +444,7 @@ class MenuHelper extends AppHelper {
 		if (!$this->_here) {
 			$view =& ClassRegistry:: getObject('view');
 			if ($view) {
-				$this->_here = $this->url($view->passedArgs);
+				$this->_here = $this->url(array_merge($view->passedArgs, $this->__extractCustomRoutesElements($view->params)));
 			}
 		}
 		if (!isset($this->settings[$section])) {
@@ -639,6 +639,22 @@ class MenuHelper extends AppHelper {
 		$attributes = $this->_attributes($tag);
 		$return .= "<$tag{$attributes}>";
 		return $return;
+	}
+
+/**
+ * Extract from $params custom routes element, defined such as
+ * '/:controller/:year/:month/:day', which are not present inside passedArgs
+ *
+ * @param array $params
+ * @access private
+ */
+	private function __extractCustomRoutesElements($params = array()) {
+		$route = Router::currentRoute();
+		if (!$route) {
+			return array();
+		}
+		$customElements = array_intersect_key($params, array_flip($route->keys));
+		return $customElements;
 	}
 
 /**

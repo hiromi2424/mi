@@ -59,6 +59,13 @@ class MenuHelperTest extends CakeTestCase {
 		$this->Controller = new Controller();
 		$this->View = new View($this->Controller);
 		$this->Controller->here = $this->View->here = '/';
+		$this->Controller->params = $this->View->params = array(
+			'base' => '/',
+			'here' => '/',
+			'webroot' => '/',
+			'passedArgs' => array(),
+			'namedArgs' => array()
+		);
 
 		$this->Menu = new TestMenuHelper();
 		$this->Menu->Html = new HtmlHelper();
@@ -556,9 +563,18 @@ class MenuHelperTest extends CakeTestCase {
 		$this->assertTags($result, $expected, true);
 	}
 
+/**
+ * Fudge request params and check the helper correctly detects the current page
+ *
+ * @return void
+ * @access public
+ */
 	function testHereDetectRouteElements() {
 		Router::connect('/:controller/:year/:month/:day',
 			array('controller' => 'twinkles', 'action' => 'index'));
+
+		$params = Router::parse('/twinkles/2010/06/09');
+		$params['base'] = '/';
 		Router::setRequestInfo(array(
 			array(
 				'pass' => array(),
@@ -568,23 +584,13 @@ class MenuHelperTest extends CakeTestCase {
 				'action' => 'index',
 				'url' => '/twinkles/2010/06/09'
 			),
-			array(
-				'base' => '/',
-				'here' => '/twinkles/2010/06/09',
-				'webroot' => '/',
-				'passedArgs' => array(),
-				'namedArgs' => array(
-					'year' => 2010,
-					'month' => 06,
-					'day' => 09,
-				)
-			)
+			$params
 		));
+		$this->View->params = $params;
 		$this->Menu->settings();
 
 		$expected = '/twinkles/2010/06/09';
 		$result = $this->Menu->here();
 		$this->assertEqual($expected, $result);
 	}
-
 }
