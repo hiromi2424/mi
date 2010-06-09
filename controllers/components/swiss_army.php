@@ -830,8 +830,8 @@ class SwissArmyComponent extends Object {
 				$sets[$key] = $values;
 			}
 		}
-		if (isset($C->{$modelClass}->actsAs['Enum'])) {
-			foreach ($C->{$modelClass}->actsAs['Enum'] as $enumeratedField) {
+		if ($C->{$modelClass}->Behaviors->attached('Enum')) {
+			foreach ($C->{$modelClass}->enumFields() as $enumeratedField) {
 				$key = Inflector::variable(Inflector::pluralize(preg_replace('/_id$/', '', $enumeratedField)));
 				if (!(array_key_exists($key, $C->viewVars) || ($params && !in_array($key, $params)))) {
 					$values = $C->{$modelClass}->enumValues($enumeratedField);
