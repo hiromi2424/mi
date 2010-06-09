@@ -22,7 +22,10 @@
 /**
  * Ensure that mb_ functions exist
  */
-uses('Multibyte');
+
+if (!class_exists('Multibyte')) {
+	App::import('Core', 'Multibyte');
+}
 
 /**
  * SluggedBehavior class
@@ -197,11 +200,10 @@ class SluggedBehavior extends ModelBehavior {
 				if ($Model->id) 					{
 					$conditions['NOT'][$Model->alias . '.' . $Model->primaryKey] = $Model->id;
 				}
-				$fields = array($Model->primaryKey, $slugField);
-				$recursive = -1;
 				$i = 0;
 				$suffix = '';
-				while($Model->find('count', compact('condition',  'fields', 'recursive'))) {
+				
+				while($Model->hasAny($conditions)) {
 					$i++;
 					$suffix	= $seperator . $i;
 					$conditions[$Model->alias . '.' . $slugField] = $slug . $suffix;
