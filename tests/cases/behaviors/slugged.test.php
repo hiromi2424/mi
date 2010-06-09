@@ -149,6 +149,32 @@ class SluggedTestCase extends CakeTestCase {
 		$this->Model = new MessageSlugged();
 	}
 
+	function testRemoveStopWords() {
+		$array = $this->Model->removeStopWords('My name is Michael Paine, and I am a nosey neighbour');
+		$expected = array(
+			'Michael Paine,',
+			'nosey neighbour'
+		);
+		$this->assertEqual($expected, $array);
+
+		$wordList = $this->Model->removeStopWords('My name is Michael Paine, and I am a nosey neighbour', array(
+			'splitOnStopWord' => false
+		));
+		$expected = array(
+			'Michael',
+			'Paine,',
+			'nosey',
+			'neighbour',
+		);
+		$this->assertEqual($expected, array_values($wordList));
+
+		$string = $this->Model->removeStopWords('My name is Michael Paine, and I am a nosey neighbour', array(
+			'return' => 'string'
+		));
+		$expected = 'Michael Paine, nosey neighbour';
+		$this->assertEqual($expected, $string);
+	}
+
 /**
  * testBuildRegex method
  *

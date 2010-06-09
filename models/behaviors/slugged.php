@@ -91,6 +91,16 @@ class SluggedBehavior extends ModelBehavior {
 	);
 
 /**
+ * stopWords property
+ *
+ * A (3 letter) language code indexed array of stop worlds
+ *
+ * @var array
+ * @access public
+ */
+	public $stopWords = array();
+
+/**
  * setup method
  *
  * Use the model's label field as the default field on which to base the slug, the label can be made up of multiple
@@ -202,7 +212,7 @@ class SluggedBehavior extends ModelBehavior {
 				}
 				$i = 0;
 				$suffix = '';
-				
+
 				while($Model->hasAny($conditions)) {
 					$i++;
 					$suffix	= $seperator . $i;
@@ -233,31 +243,42 @@ class SluggedBehavior extends ModelBehavior {
  *
  * @param mixed $Model
  * @param string $string ''
- * @param string $seperator '
- * @param bool $splitOnStopWord true
- * @param bool $returnArray true
+ * @param array $params
  * @return mixed
  * @access public
  */
-	public function removeStopWords(&$Model, $string = '', $seperator = ' ', $splitOnStopWord = true, $returnArray = true) {
+	public function removeStopWords(&$Model, $string = '', $params = array()) {
+		$seperator = ' ';
+		$splitOnStopWord = true;
+		$return = 'array';
+		extract ($params);
+
 		if (!strpos($string, $seperator)) {
-			if ($returnArray) {
+			if ($return === 'array') {
 				return array($string);
 			}
 			return $string;
 		}
 		$originalTerms = $terms = array_filter(array_map('trim', explode($seperator, $string)));
+		if (!class_exists('MiCache')) {
+			App::import('Vendor', 'Mi.MiCache');
+		}
 		$lang = MiCache::setting('Site.lang');
+		if (!$lang) {
+			$lang = 'eng';
+		}
 		if (!array_key_exists($lang, $this->stopWords)) {
 			ob_start();
 			App::import('Vendor', 'stop_words/' . $lang, array('file' => "stop_words/$lang.txt"));
 			$stopWords = preg_replace('@/\*.*\*/@', '', ob_get_clean());
-			$this->stopWords[$lang] = array_map('trim', explode(',', str_replace(array("\n", "\r"), '', $stopWords)));
+			$this->stopWords[$lang] = array_map('trim', explode("\n", $stopWords));
 		}
 		if ($splitOnStopWord) {
 			$terms = $chunk = array();
+			$snippet = '';
 			foreach($originalTerms as $term) {
-				if (in_array($term, $this->stopWords[$lang])) {
+				$lterm = strtolower($term);
+				if (in_array($lterm, $this->stopWords[$lang])) {
 					if ($chunk) {
 						$terms[] = $chunk;
 						$chunk = array();
@@ -273,15 +294,17 @@ class SluggedBehavior extends ModelBehavior {
 				$phrase = implode(' ', $phrase);
 			}
 		} else {
-			$terms = array_diff($terms, $this->stopWords[$lang]);
+			$lTerms = array_map('strtolower', $terms);
+			$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
+			$terms = array_intersect_key($terms, $lTerms);
 		}
 		if (!$terms) {
 			$terms = array(implode(' ', $originalTerms));
 		}
-		if ($returnArray) {
+		if ($return === 'array') {
 			return $terms;
 		}
-		return implode($sepeartor, $terms);
+		return implode($seperator, $terms);
 	}
 
 /**
