@@ -1,8 +1,6 @@
 <?php
 /**
- * Short description for menu.php
- *
- * Long description for menu.php
+ * Helper for generating menus - usually <ul>s
  *
  * PHP version 5
  *
@@ -188,7 +186,6 @@ class MenuHelper extends AppHelper {
 			if ($under) {
 				$options = $under;
 			}
-			$options = $under;
 			$under = $url;
 			$url = $title;
 			$title = $section;

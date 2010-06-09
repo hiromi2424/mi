@@ -16,8 +16,28 @@
  * @since         v 1.0 (28-Mar-2009)
  * @license       http://www.opensource.org/licenses/mit-license.php The MIT License
  */
-App::import('Core', array('Helper', 'AppHelper', 'Html'));
+App::import('Core', array('Helper', 'AppHelper', 'Html', 'Router'));
 App::import('Helper', array('Mi.Menu'));
+
+/**
+ * TestMenuHelper class
+ *
+ * @uses          MenuHelper
+ * @package       mi
+ * @subpackage    mi.tests.cases.helpers
+ */
+class TestMenuHelper extends MenuHelper {
+
+/**
+ * test accessor
+ *
+ * @return void
+ * @access public
+ */
+	function here() {
+		return $this->_here;
+	}
+}
 
 /**
  * MenuHelperTest class
@@ -29,14 +49,30 @@ App::import('Helper', array('Mi.Menu'));
 class MenuHelperTest extends CakeTestCase {
 
 /**
- * setUp method
+ * startTest method
  *
- * @access public
  * @return void
+ * @access public
  */
-	function setUp() {
-		$this->Menu = new MenuHelper();
+	function startTest() {
+		Router::reload();
+		$this->Controller = new Controller();
+		$this->View = new View($this->Controller);
+		$this->Controller->here = $this->View->here = '/';
+
+		$this->Menu = new TestMenuHelper();
 		$this->Menu->Html = new HtmlHelper();
+	}
+
+/**
+ * endTest method
+ *
+ * @return void
+ * @access public
+ */
+	function endTest() {
+		unset($this->Menu);
+		ClassRegistry::flush();
 	}
 
 /**
@@ -519,4 +555,36 @@ class MenuHelperTest extends CakeTestCase {
 		);
 		$this->assertTags($result, $expected, true);
 	}
+
+	function testHereDetectRouteElements() {
+		Router::connect('/:controller/:year/:month/:day',
+			array('controller' => 'twinkles', 'action' => 'index'));
+		Router::setRequestInfo(array(
+			array(
+				'pass' => array(),
+				'admin' => false,
+				'plugin' => null,
+				'controller' => 'twinkles',
+				'action' => 'index',
+				'url' => '/twinkles/2010/06/09'
+			),
+			array(
+				'base' => '/',
+				'here' => '/twinkles/2010/06/09',
+				'webroot' => '/',
+				'passedArgs' => array(),
+				'namedArgs' => array(
+					'year' => 2010,
+					'month' => 06,
+					'day' => 09,
+				)
+			)
+		));
+		$this->Menu->settings();
+
+		$expected = '/twinkles/2010/06/09';
+		$result = $this->Menu->here();
+		$this->assertEqual($expected, $result);
+	}
+
 }
