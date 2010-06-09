@@ -302,6 +302,9 @@ class SluggedBehavior extends ModelBehavior {
 			$terms = array(implode(' ', $originalTerms));
 		}
 		if ($return === 'array') {
+			foreach($terms as &$term) {
+				$term = trim($term, ',.;:?¿¡!');
+			}
 			return $terms;
 		}
 		return implode($seperator, $terms);

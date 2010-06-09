@@ -152,7 +152,7 @@ class SluggedTestCase extends CakeTestCase {
 	function testRemoveStopWords() {
 		$array = $this->Model->removeStopWords('My name is Michael Paine, and I am a nosey neighbour');
 		$expected = array(
-			'Michael Paine,',
+			'Michael Paine',
 			'nosey neighbour'
 		);
 		$this->assertEqual($expected, $array);
@@ -162,7 +162,7 @@ class SluggedTestCase extends CakeTestCase {
 		));
 		$expected = array(
 			'Michael',
-			'Paine,',
+			'Paine',
 			'nosey',
 			'neighbour',
 		);
