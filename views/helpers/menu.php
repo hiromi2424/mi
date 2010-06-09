@@ -48,17 +48,17 @@ class MenuHelper extends AppHelper {
  * counter property
  *
  * @var int 1000
- * @access private
+ * @access protected
  */
-	private $__counter = 1000;
+	protected $_counter = 1000;
 
 /**
  * defaultSettings property
  *
  * @var array
- * @access private
+ * @access protected
  */
-	private $__defaultSettings = array(
+	protected $_defaultSettings = array(
 		'activeMode' => 'url', // url // controller[name] // action[and controller name] // false [do nothing]
 		'hereMode' => 'active', // active[mark the li as active] // text[no link just text] // false[do nothing]
 		'parentHereMode' => 'active', // active[mark the li as active] // text[no link just text] // false[do nothing]
@@ -90,9 +90,9 @@ class MenuHelper extends AppHelper {
  * The current section
  *
  * @var string 'menu'
- * @access private
+ * @access protected
  */
-	private $__section = 'menu';
+	protected $_section = 'menu';
 
 /**
  * data property
@@ -100,9 +100,9 @@ class MenuHelper extends AppHelper {
  * Holds the menu data as they get built. References flatData.
  *
  * @var array
- * @access private
+ * @access protected
  */
-	private $__data = array();
+	protected $_data = array();
 
 /**
  * flatData property
@@ -110,9 +110,9 @@ class MenuHelper extends AppHelper {
  * A flat list of menu data
  *
  * @var array
- * @access private
+ * @access protected
  */
-	private $__flatData = array();
+	protected $_flatData = array();
 
 /**
  * here property
@@ -120,19 +120,19 @@ class MenuHelper extends AppHelper {
  * Place holder for router normalized "here"
  *
  * @var string ''
- * @access private
+ * @access protected
  */
-	private $__here = '';
+	protected $_here = '';
 
 /**
  * construct method
  *
  * @param array $options
  * @return void
- * @access private
+ * @access protected
  */
 	public function __construct($options = array()) {
-		$this->__defaultSettings = am($this->__defaultSettings, $options);
+		$this->_defaultSettings = am($this->_defaultSettings, $options);
 		parent::__construct($options);
 	}
 
@@ -143,7 +143,7 @@ class MenuHelper extends AppHelper {
  * @access public
  */
 	public function beforeLayout() {
-		$this->__counter = 0;
+		$this->_counter = 0;
 	}
 
 /**
@@ -173,7 +173,7 @@ class MenuHelper extends AppHelper {
 		$htmlAttributes = isset($options['htmlAttributes'])?$options['htmlAttributes']:array();
 		$confirmMessage = false;
 		$escapeTitle = true;
-		$order = $this->__counter++;
+		$order = $this->_counter++;
 		if (is_array($section)) {
 			$first = current($section);
 			if (is_array($first) && isset($first['title'])) {
@@ -182,7 +182,7 @@ class MenuHelper extends AppHelper {
 				}
 				return;
 			} else {
-				extract(am(array('section' => $this->__section), $section));
+				extract(am(array('section' => $this->_section), $section));
 			}
 		} elseif ($url == null) {
 			if ($under) {
@@ -192,10 +192,10 @@ class MenuHelper extends AppHelper {
 			$under = $url;
 			$url = $title;
 			$title = $section;
-			$section = $this->__section;
+			$section = $this->_section;
 		}
 		$settings = $this->settings($section);
-		$section = $this->__section;
+		$section = $this->_section;
 		if ($settings['uniqueKey'] === 'url') {
 			$key = Router::normalize($url);
 		} else {
@@ -213,7 +213,7 @@ class MenuHelper extends AppHelper {
 			return;
 		}
 
-		list($here, $markActive, $url) = $this->__setHere($section, $url, $key, $settings['activeMode'], $settings['hereMode'], $options);
+		list($here, $markActive, $url) = $this->_setHere($section, $url, $key, $settings['activeMode'], $settings['hereMode'], $options);
 		if ($options) {
 			extract($options);
 		}
@@ -234,7 +234,7 @@ class MenuHelper extends AppHelper {
 			'escapeTitle' => true
 		);
 		if ($under) {
-			if (!isset($this->__flatData[$section][$under])) {
+			if (!isset($this->_flatData[$section][$under])) {
 				$parent = array(
 					'placeholder' => true,
 					'order' => $order,
@@ -257,20 +257,20 @@ class MenuHelper extends AppHelper {
 				} else {
 					$parent[$settings['uniqueKey']] = Router::normalize($under);
 				}
-				$this->__flatData[$section][$under] = $parent;
-				$this->__data[$section][$under] =& $this->__flatData[$section][$under];
+				$this->_flatData[$section][$under] = $parent;
+				$this->_data[$section][$under] =& $this->_flatData[$section][$under];
 			}
-			$this->__flatData[$section][$key] = $item;
-			$this->__flatData[$section][$under]['children'][$key] =& $this->__flatData[$section][$key];
-		} elseif (isset($this->__flatData[$section][$key]) && !empty($this->__flatData[$section][$key]['placeholder'])) {
-			$item['children'] =& $this->__flatData[$section][$key]['children'];
-			unset($this->__data[$section][$key]);
-			unset($this->__flatData[$section][$key]);
-			$this->__flatData[$section][$key] = $item;
-			$this->__data[$section][$key] =& $this->__flatData[$section][$key];
-		} elseif (!isset($this->__flatData[$section][$key]) || $settings['overwrite']) {
-			$this->__flatData[$section][$key] = $item;
-			$this->__data[$section][$key] =& $this->__flatData[$section][$key];
+			$this->_flatData[$section][$key] = $item;
+			$this->_flatData[$section][$under]['children'][$key] =& $this->_flatData[$section][$key];
+		} elseif (isset($this->_flatData[$section][$key]) && !empty($this->_flatData[$section][$key]['placeholder'])) {
+			$item['children'] =& $this->_flatData[$section][$key]['children'];
+			unset($this->_data[$section][$key]);
+			unset($this->_flatData[$section][$key]);
+			$this->_flatData[$section][$key] = $item;
+			$this->_data[$section][$key] =& $this->_flatData[$section][$key];
+		} elseif (!isset($this->_flatData[$section][$key]) || $settings['overwrite']) {
+			$this->_flatData[$section][$key] = $item;
+			$this->_data[$section][$key] =& $this->_flatData[$section][$key];
 		} elseif ($settings['showWarnings'])  {
 			if ($settings['uniqueKey'] === 'title') {
 				$altKey = 'url';
@@ -284,7 +284,7 @@ class MenuHelper extends AppHelper {
 			return;
 		}
 		if ($settings['hereMode'] === 'text' && $here === true) {
-			$this->__flatData[$section][$key]['url'] = false;
+			$this->_flatData[$section][$key]['url'] = false;
 		}
 		if (!empty($children)) {
 			foreach ($children as $row) {
@@ -306,9 +306,9 @@ class MenuHelper extends AppHelper {
  */
 	public function addAttribute($tag, $id = '', $key = '', $value = null) {
 		if (!is_null($value)) {
-			$this->__attributes[$tag][$id][$key] = $value;
-		} elseif (!(isset($this->__attributes[$tag][$id]) && in_array($key, $this->__attributes[$tag][$id]))) {
-			$this->__attributes[$tag][$id][] = $key;
+			$this->_attributes[$tag][$id][$key] = $value;
+		} elseif (!(isset($this->_attributes[$tag][$id]) && in_array($key, $this->_attributes[$tag][$id]))) {
+			$this->_attributes[$tag][$id][] = $key;
 		}
 	}
 
@@ -326,16 +326,16 @@ class MenuHelper extends AppHelper {
  */
 	public function del($section, $key = null) {
 		if (is_null($key)) {
-			if (isset($this->__flatData[$section])) {
-				unset ($this->__flatData[$section]);
-				unset ($this->__data[$section]);
+			if (isset($this->_flatData[$section])) {
+				unset ($this->_flatData[$section]);
+				unset ($this->_data[$section]);
 				return;
 			}
 			$key = $section;
-			$section = $this->__section;
+			$section = $this->_section;
 		}
-		unset ($this->__flatData[$section][$key]);
-		unset ($this->__data[$section][$key]);
+		unset ($this->_flatData[$section][$key]);
+		unset ($this->_data[$section][$key]);
 	}
 
 /**
@@ -357,28 +357,28 @@ class MenuHelper extends AppHelper {
 	public function display($section = null, $settings = array(), $createEmpty = true) {
 		$this->setActive();
 		if (is_array($section)) {
-			extract(array_merge(array('section' => $this->__section), $section));
+			extract(array_merge(array('section' => $this->_section), $section));
 		}
 		$settings = $this->settings($section, (array)$settings);
 		if (!$section) {
-			$section = $this->__section;
+			$section = $this->_section;
 		}
-		if (!isset($this->settings[$section]) || empty($this->__data[$section])) {
+		if (!isset($this->settings[$section]) || empty($this->_data[$section])) {
 			$return = '';
 		} else {
-			$this->__attributes = array();
-			$return = $this->__display($section, $settings, $this->__data[$section]);
+			$this->_attributes = array();
+			$return = $this->_display($section, $settings, $this->_data[$section]);
 		}
 		if ($this->settings[$section]['wrap']) {
 			$return = sprintf($this->settings[$section]['wrap'], $return);
 		}
 		if (trim($return) === '' && $createEmpty) {
 			$typeTag = $this->settings[$section]['typeTag'];
-			$return = $this->__displayHead($section, $settings, true) . "</$typeTag>";
+			$return = $this->_displayHead($section, $settings, true) . "</$typeTag>";
 		}
 		unset ($this->settings[$section]);
-		unset ($this->__data[$section]);
-		unset ($this->__flatData[$section]);
+		unset ($this->_data[$section]);
+		unset ($this->_flatData[$section]);
 		return trim($return);
 	}
 
@@ -438,20 +438,20 @@ class MenuHelper extends AppHelper {
 			$section = null;
 		}
 		if ($section === null) {
-			$section = $this->__section;
+			$section = $this->_section;
 		} elseif (!$section) {
-			$section = $this->__section = 'menu';
+			$section = $this->_section = 'menu';
 		} else {
-			$this->__section = $section;
+			$this->_section = $section;
 		}
-		if (!$this->__here) {
+		if (!$this->_here) {
 			$view =& ClassRegistry:: getObject('view');
 			if ($view) {
-				$this->__here = $this->url($view->passedArgs);
+				$this->_here = $this->url($view->passedArgs);
 			}
 		}
 		if (!isset($this->settings[$section])) {
-			$settings = array_merge($this->__defaultSettings, $settings);
+			$settings = array_merge($this->_defaultSettings, $settings);
 			$this->settings[$section] = $settings;
 		} elseif ($settings) {
 			$this->settings[$section] = array_merge($this->settings[$section], $settings);
@@ -464,12 +464,12 @@ class MenuHelper extends AppHelper {
 
 	public function setActive($key = null, $section = null) {
 		if ($section === null) {
-			$section = $this->__section;
+			$section = $this->_section;
 		}
 		$settings = $this->settings($section);
 		if ($key) {
-			if (isset($this->__flatData[$section][$settings['hereKey']]['markActive'])) {
-				$this->__flatData[$section][$settings['hereKey']]['markActive'] = false;
+			if (isset($this->_flatData[$section][$settings['hereKey']]['markActive'])) {
+				$this->_flatData[$section][$settings['hereKey']]['markActive'] = false;
 			}
 		} elseif (isset($settings['hereKey'])) {
 			$key = $settings['hereKey'];
@@ -477,15 +477,15 @@ class MenuHelper extends AppHelper {
 			return false;
 		}
 		$this->settings[$section]['hereKey'] = $key;
-		if (!isset($this->__flatData[$section][$key])) {
+		if (!isset($this->_flatData[$section][$key])) {
 			return false;
 		}
-		$this->__flatData[$section][$key]['markActive'] = true;
-		if ($settings['parentHereMode'] && $this->__flatData[$section][$key]['under']) {
+		$this->_flatData[$section][$key]['markActive'] = true;
+		if ($settings['parentHereMode'] && $this->_flatData[$section][$key]['under']) {
 			$this->_setParentsActive(
 				$key,
 				$settings['parentHereMode'],
-				$this->__flatData[$section]
+				$this->_flatData[$section]
 			);
 		}
 	}
@@ -495,13 +495,13 @@ class MenuHelper extends AppHelper {
  * @param mixed $rType
  * @param bool $clear
  * @return void
- * @access private
+ * @access protected
  */
-	private function __attributes($tag, $clear = true) {
-		if (empty($this->__attributes[$tag])) {
+	protected function _attributes($tag, $clear = true) {
+		if (empty($this->_attributes[$tag])) {
 			return '';
 		}
-		foreach ($this->__attributes[$tag] as $i => &$values) {
+		foreach ($this->_attributes[$tag] as $i => &$values) {
 			foreach ($values as $j => &$val) {
 				if (is_array($val)) {
 					$_a = array();
@@ -516,9 +516,9 @@ class MenuHelper extends AppHelper {
 			}
 			$values = $i . '="' . implode(' ', $values) . '"';
 		}
-		$return = ' ' . implode(' ', $this->__attributes[$tag]) . ' ';
+		$return = ' ' . implode(' ', $this->_attributes[$tag]) . ' ';
 		if ($clear) {
-			unset($this->__attributes[$tag]);
+			unset($this->_attributes[$tag]);
 		}
 		return $return;
 	}
@@ -530,20 +530,20 @@ class MenuHelper extends AppHelper {
  *
  * @param mixed $data
  * @return void
- * @access private
+ * @access protected
  */
-	private function __menuItem($data) {
+	protected function _menuItem($data) {
 		if ($data['markActive']) {
 			if ($data['markActive'] === true) {
 				$data['markActive'] = 'active';
 			}
-			$this->addAttribute($this->settings[$this->__section]['itemTag'], 'class', $data['markActive']);
+			$this->addAttribute($this->settings[$this->_section]['itemTag'], 'class', $data['markActive']);
 		}
 		if ($data['class']) {
-			$this->addAttribute($this->settings[$this->__section]['itemTag'], 'class', $data['class']);
+			$this->addAttribute($this->settings[$this->_section]['itemTag'], 'class', $data['class']);
 		}
 		if ($data['id']) {
-			$this->addAttribute($this->settings[$this->__section]['itemTag'], 'id', $data['id']);
+			$this->addAttribute($this->settings[$this->_section]['itemTag'], 'id', $data['id']);
 		}
 
 		if ($data['url'] === false) {
@@ -563,9 +563,9 @@ class MenuHelper extends AppHelper {
  * @param mixed $settings
  * @param mixed $data
  * @return void
- * @access private
+ * @access protected
  */
-	private function __display($section, $settings, $data, $header = true, $prefix = "\r\n") {
+	protected function _display($section, $settings, $data, $header = true, $prefix = "\r\n") {
 		$return = '';
 		$start = true;
 		if ($settings['splitCount']) {
@@ -593,18 +593,18 @@ class MenuHelper extends AppHelper {
 				}
 				$splitCounter++;
 			}
-			$contents = $this->__menuItem($result);
-			$attributes = $this->__attributes($itemTag);
+			$contents = $this->_menuItem($result);
+			$attributes = $this->_attributes($itemTag);
 			$return .= "$prefix\t<$itemTag{$attributes}>$contents";
 			if (!empty($result['children'])) {
 				$_settings = am($settings, array('class' => false, 'id' => false));
-				$return .= $this->__display($section, $_settings, $result['children'], false, $prefix . "\t\t");
+				$return .= $this->_display($section, $_settings, $result['children'], false, $prefix . "\t\t");
 				$return .= $prefix . "\t";
 			}
 			$return .= "</$itemTag>";
 			if ($start) {
 				$start = false;
-				$return = $prefix . $this->__displayHead($section, $settings, $header) . $return;
+				$return = $prefix . $this->_displayHead($section, $settings, $header) . $return;
 			}
 		}
 		$return .= "$prefix</$typeTag>";
@@ -621,9 +621,9 @@ class MenuHelper extends AppHelper {
  * @param mixed $settings
  * @param bool $header
  * @return void
- * @access private
+ * @access protected
  */
-	private function __displayHead($section, $settings, $header = false) {
+	protected function _displayHead($section, $settings, $header = false) {
 		$return = '';
 		if ($header) {
 			$section = Inflector::humanize(Inflector::underscore($section));
@@ -639,7 +639,7 @@ class MenuHelper extends AppHelper {
 			}
 		}
 		$tag = $settings['typeTag'];
-		$attributes = $this->__attributes($tag);
+		$attributes = $this->_attributes($tag);
 		$return .= "<$tag{$attributes}>";
 		return $return;
 	}
@@ -654,10 +654,10 @@ class MenuHelper extends AppHelper {
  * @param mixed $url
  * @param mixed $activeMode
  * @param mixed $hereMode
- * @access private
+ * @access protected
  * @return array($here, $markActive, $url)
  */
-	public function __setHere($section, $url, $key, $activeMode, $hereMode, $options) {
+	protected function _setHere($section, $url, $key, $activeMode, $hereMode, $options) {
 		$view =& ClassRegistry:: getObject('view');
 		if (!$view) {
 			return array(false, false, $url);
@@ -675,7 +675,7 @@ class MenuHelper extends AppHelper {
 			$markActive = $options['markActive'];
 		}
 		if ($here === null && $activeMode) {
-			if ($activeMode == 'url' && $url && $this->url($url) == $this->__here) {
+			if ($activeMode == 'url' && $url && $this->url($url) == $this->_here) {
 				$here = true;
 			} elseif (!in_array($activeMode, array('action'))) {
 				if (isset($view->passedArgs[$activeMode])) {
@@ -745,7 +745,7 @@ class MenuHelper extends AppHelper {
 		if (is_array($section)) {
 			return $this->add($section);
 		}
-		$this->__section = $section;
+		$this->_section = $section;
 		return $this->add($data);
 	}
 
@@ -761,7 +761,7 @@ class MenuHelper extends AppHelper {
  * @access public
  */
 	public function addItemAttribute($id = '', $key = '', $value = null) {
-		$this->addAttribute($this->settings[$this->__section]['itemTag'], $id, $key, $value);
+		$this->addAttribute($this->settings[$this->_section]['itemTag'], $id, $key, $value);
 	}
 
 /**
@@ -775,7 +775,7 @@ class MenuHelper extends AppHelper {
  * @access public
  */
 	public function addTypeAttribute($id = '', $key = '', $value = null) {
-		$this->addAttribute($this->settings[$this->__section]['typeTag'], $id, $key, $value);
+		$this->addAttribute($this->settings[$this->_section]['typeTag'], $id, $key, $value);
 	}
 
 /**
@@ -787,7 +787,7 @@ class MenuHelper extends AppHelper {
  * @return void
  */
 	public function menuItem(&$data) {
-		return $this->__menuItem($data);
+		return $this->_menuItem($data);
 	}
 
 /**
