@@ -242,7 +242,7 @@ class SluggedBehavior extends ModelBehavior {
  * Passing "contain this" will return array('contain this')
  *
  * @param mixed $Model
- * @param string $string ''
+ * @param mixed $string string or array of words
  * @param array $params
  * @return mixed
  * @access public
@@ -253,13 +253,6 @@ class SluggedBehavior extends ModelBehavior {
 		$return = 'array';
 		extract ($params);
 
-		if (!strpos($string, $seperator)) {
-			if ($return === 'array') {
-				return array($string);
-			}
-			return $string;
-		}
-		$originalTerms = $terms = array_filter(array_map('trim', explode($seperator, $string)));
 		if (!class_exists('MiCache')) {
 			App::import('Vendor', 'Mi.MiCache');
 		}
@@ -275,31 +268,46 @@ class SluggedBehavior extends ModelBehavior {
 			$stopWords = preg_replace('@/\*.*\*/@', '', ob_get_clean());
 			$this->stopWords[$lang] = array_filter(array_map('trim', explode("\n", $stopWords)));
 		}
-		if ($splitOnStopWord) {
-			$terms = $chunk = array();
-			$snippet = '';
-			foreach($originalTerms as $term) {
-				$lterm = strtolower($term);
-				if (in_array($lterm, $this->stopWords[$lang])) {
-					if ($chunk) {
-						$terms[] = $chunk;
-						$chunk = array();
-					}
-					continue;
-				}
-				$chunk[] = $term;
-			}
-			if ($chunk) {
-				$terms[] = $chunk;
-			}
-			foreach($terms as &$phrase) {
-				$phrase = implode(' ', $phrase);
-			}
-		} else {
+
+		if (is_array($string)) {
 			$lTerms = array_map('strtolower', $terms);
 			$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
 			$terms = array_intersect_key($terms, $lTerms);
+		} else {
+			if (!strpos($string, $seperator)) {
+				if ($return === 'array') {
+					return array($string);
+				}
+				return $string;
+			}
+			$originalTerms = $terms = array_filter(array_map('trim', explode($seperator, $string)));
+			if ($splitOnStopWord) {
+				$terms = $chunk = array();
+				$snippet = '';
+				foreach($originalTerms as $term) {
+					$lterm = strtolower($term);
+					if (in_array($lterm, $this->stopWords[$lang])) {
+						if ($chunk) {
+							$terms[] = $chunk;
+							$chunk = array();
+						}
+						continue;
+					}
+					$chunk[] = $term;
+				}
+				if ($chunk) {
+					$terms[] = $chunk;
+				}
+				foreach($terms as &$phrase) {
+					$phrase = implode(' ', $phrase);
+				}
+			} else {
+				$lTerms = array_map('strtolower', $terms);
+				$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
+				$terms = array_intersect_key($terms, $lTerms);
+			}
 		}
+
 		if (!$terms) {
 			$terms = array(implode(' ', $originalTerms));
 		}
@@ -307,7 +315,7 @@ class SluggedBehavior extends ModelBehavior {
 			foreach($terms as &$term) {
 				$term = trim($term, ',.;:?¿¡!');
 			}
-			return $terms;
+			return array_unique($terms);
 		}
 		return implode($seperator, $terms);
 	}
