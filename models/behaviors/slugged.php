@@ -269,9 +269,11 @@ class SluggedBehavior extends ModelBehavior {
 		}
 		if (!array_key_exists($lang, $this->stopWords)) {
 			ob_start();
-			App::import('Vendor', 'stop_words/' . $lang, array('file' => "stop_words/$lang.txt"));
+			if (!App::import('Vendor', 'stop_words/' . $lang, array('file' => "stop_words/$lang.txt"))) {
+				App::import('Vendor', 'stop_words/' . $lang, array('plugin' => 'Mi', 'file' => "stop_words/$lang.txt"));
+			}
 			$stopWords = preg_replace('@/\*.*\*/@', '', ob_get_clean());
-			$this->stopWords[$lang] = array_map('trim', explode("\n", $stopWords));
+			$this->stopWords[$lang] = array_filter(array_map('trim', explode("\n", $stopWords)));
 		}
 		if ($splitOnStopWord) {
 			$terms = $chunk = array();
