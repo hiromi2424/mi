@@ -532,7 +532,7 @@ class MenuHelper extends AppHelper {
 	protected function _menuItem($data) {
 		if ($data['markActive']) {
 			if ($data['markActive'] === true) {
-				$data['markActive'] = 'active';
+				$data['markActive'] = $this->settings[$this->_section]['hereMode'];
 			}
 			$this->addAttribute($this->settings[$this->_section]['itemTag'], 'class', $data['markActive']);
 		}
