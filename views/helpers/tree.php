@@ -143,7 +143,7 @@ class TreeHelper extends AppHelper {
  * @access public
  */
 	public function generate($data, $settings = array ()) {
-		$this->set($data);
+		$this->setData($data);
 		$settings = $this->_settings($settings);
 		if ($this->_settings['autoPath'] && !isset($this->_settings['autoPath'][2])) {
 			$this->_settings['autoPath'][2] = 'active';
