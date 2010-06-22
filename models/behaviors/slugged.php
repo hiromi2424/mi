@@ -87,7 +87,8 @@ class SluggedBehavior extends ModelBehavior {
 			'+' => 'and',
 			'#' => 'hash',
 		),
-		'run' => 'beforeValidate'
+		'run' => 'beforeValidate',
+		'multibyte' => false,
 	);
 
 /**
@@ -381,6 +382,12 @@ class SluggedBehavior extends ModelBehavior {
 				}
 			}
 		}
+
+		if ($multibyte && function_exists('mb_convert_encoding')) {
+			$encoding = ($multibyte === true) ? Configure::read('App.encoding') : $multibyte;
+			$slug = mb_convert_encoding($slug, $encoding, $encoding);
+		}
+
 		return $slug;
 	}
 
