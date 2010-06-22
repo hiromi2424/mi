@@ -18055,4 +18055,41 @@ class SluggedTestCase extends CakeTestCase {
 		$result = $this->Model->slug($string);
 		$this->assertEqual($result, $expects);
 	}
+
+
+/**
+ * testTruncateMultibyte method
+ * This tests about multi-byte strings was cutted as wrong character format when bytes length is longer than the limitation.
+ *
+ * @return void
+ * @access public
+ */
+	function testTruncateMultibyte() {
+		$encoding = Configure::read('App.encoding');
+		Configure::write('App.encoding', 'UTF-8');
+
+		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => false));
+		$result = $this->Model->slug('モデルのデータベースとデータソース');
+		$expects = 'モデルのデータベースとデータソー';
+		$this->assertNotEqual($result, $expects);
+
+		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => true));
+		$result = $this->Model->slug('モデルのデータベースとデータソース');
+		$expects = 'モデルのデータベースとデータソー';
+		$this->assertEqual($result, $expects);
+
+		Configure::write('App.encoding', 'ascii');
+
+		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => true));
+		$result = $this->Model->slug('モデルのデータベースとデータソース');
+		$expects = 'モデルのデータベースとデータソー';
+		$this->assertNotEqual($result, $expects);
+
+		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => 'UTF-8'));
+		$result = $this->Model->slug('モデルのデータベースとデータソース');
+		$expects = 'モデルのデータベースとデータソー';
+		$this->assertEqual($result, $expects);
+
+		Configure::write('App,encoding', $encoding);
+	}
 }
