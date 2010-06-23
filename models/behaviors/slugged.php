@@ -114,16 +114,28 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  */
 	public function setup(&$Model, $config = array()) {
+		$this->_defaultSettings['notices'] = Configure::read();
+
 		$this->settings[$Model->alias] = Set::merge($this->_defaultSettings, $config);
 		extract ($this->settings[$Model->alias]);
 		$label = $this->settings[$Model->alias]['label'] = (array)$label;
 		if ($Model->Behaviors->attached('Translate')) {
 			$notices = false;
 		}
-		foreach($label as $field) {
-			if ($notices && !$Model->hasField($field)) {
-				trigger_error('(SluggedBehavior::setup) model ' . $Model->name . ' is missing the field ' . $field . ' specified in the setup.', E_USER_WARNING);
-				$Model->Behaviors->disable($this->name);
+		if ($notices) {
+			foreach($label as $field) {
+				$alias = $Model->alias;
+				if (strpos($field, '.')) {
+					list($alias, $field) = explode('.', $field);
+					if (!$Model->$alias->hasField($field)) {
+						trigger_error('(SluggedBehavior::setup) model ' . $Model->$alias->name . ' is missing the field ' . $field .
+							' (specified in the setup for model ' . $Model->name . ') ', E_USER_WARNING);
+						$Model->Behaviors->disable($this->name);
+					}
+				} elseif (!$Model->hasField($field)) {
+					trigger_error('(SluggedBehavior::setup) model ' . $Model->name . ' is missing the field ' . $field . ' specified in the setup.', E_USER_WARNING);
+					$Model->Behaviors->disable($this->name);
+				}
 			}
 		}
 	}
@@ -194,6 +206,10 @@ class SluggedBehavior extends ModelBehavior {
 				}
 				$slug = array();
 				foreach($label as $field) {
+					$alias = $Model->alias;
+					if (strpos($field, '.')) {
+						list($alias, $field) = explode('.', $field);
+					}
 					if (isset($Model->data[$alias][$field])) {
 						if (is_array($Model->data[$alias][$field])) {
 							return $this->_multiSlug($Model);
