@@ -4,7 +4,7 @@
  *
  * Part based/inspired by the sluggable behavior of Mariano Iglesias
  *
- * PHP versions 4 and 5
+ * PHP version 5
  *
  * Copyright (c) 2008, Andy Dawson
  *
@@ -42,7 +42,7 @@ class SluggedBehavior extends ModelBehavior {
  * @var string 'Slugged'
  * @access public
  */
-	var $name = 'Slugged';
+	public $name = 'Slugged';
 
 /**
  * defaultSettings property
@@ -72,7 +72,7 @@ class SluggedBehavior extends ModelBehavior {
  * @var array
  * @access protected
  */
-	var $_defaultSettings = array(
+	protected $_defaultSettings = array(
 		'label' => null,
 		'slugField' => 'slug',
 		'mode' => 'url',
@@ -113,7 +113,7 @@ class SluggedBehavior extends ModelBehavior {
  * @access public
  * @return void
  */
-	function setup(&$Model, $config = array()) {
+	public function setup(&$Model, $config = array()) {
 		$this->settings[$Model->alias] = Set::merge($this->_defaultSettings, $config);
 		extract ($this->settings[$Model->alias]);
 		$label = $this->settings[$Model->alias]['label'] = (array)$label;
@@ -135,7 +135,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access public
  */
-	function beforeValidate(&$Model) {
+	public function beforeValidate(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		if ($run !== 'beforeValidate') {
 			return true;
@@ -150,7 +150,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access public
  */
-	function beforeSave(&$Model) {
+	public function beforeSave(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		if ($run !== 'beforeSave') {
 			return true;
@@ -172,7 +172,7 @@ class SluggedBehavior extends ModelBehavior {
  * @access public
  * @return void
  */
-	function generateSlug(&$Model) {
+	public function generateSlug(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		if ($notices && !$Model->hasField($slugField)) {
 			return true;
@@ -346,7 +346,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return string a slug
  * @access public
  */
-	function slug($Model, $string, $tidy = true) {
+	public function slug($Model, $string, $tidy = true) {
 		extract ($this->settings[$Model->alias]);
 		$this->_setEncoding($Model, $encoding, $string, !Configure::read());
 
@@ -414,7 +414,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return mixed string (the display name) or false
  * @access public
  */
-	function display(&$Model, $id = null) {
+	public function display(&$Model, $id = null) {
 		if (!$id) {
 			if (!$Model->id) {
 				return false;
@@ -437,7 +437,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return bool true on success false otherwise
  * @access public
  */
-	function resetSlugs(&$Model, $params = array()) {
+	public function resetSlugs(&$Model, $params = array()) {
 		$recursive = -1;
 		extract ($this->settings[$Model->alias]);
 		if ($notices && !$Model->hasField($slugField)) {
@@ -477,7 +477,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access protected
  */
-	function _multiSlug(&$Model) {
+	protected function _multiSlug(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		$data = $Model->data;
 		$field = current($label);
@@ -505,7 +505,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access protected
  */
-	function _pregReplace($pattern, $replace, $string, $encoding = 'UTF-8') {
+	protected function _pregReplace($pattern, $replace, $string, $encoding = 'UTF-8') {
 		if ($encoding && $encoding !== 'UTF-8') {
 			$string = mb_convert_encoding($string, 'UTF-8', $encoding);
 		}
@@ -526,7 +526,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access protected
  */
-	function _setEncoding(&$Model, &$encoding = null, &$string, $reset = null) {
+	protected function _setEncoding(&$Model, &$encoding = null, &$string, $reset = null) {
 		if (function_exists('mb_internal_encoding')) {
 			$aEncoding = Configure::read('App.encoding');
 			if ($aEncoding) {
@@ -555,7 +555,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return string a partial regex
  * @access private
  */
-	function __regex($mode) {
+	private function __regex($mode) {
 		$return = '\x00-\x1f\x26\x3c\x7f-\x9f\x{d800}-\x{dfff}\x{fffe}-\x{ffff}';
 		if ($mode === 'display') {
 			return $return;
