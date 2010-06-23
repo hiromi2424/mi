@@ -88,7 +88,8 @@ class SluggedBehavior extends ModelBehavior {
 			'#' => 'hash',
 		),
 		'run' => 'beforeValidate',
-		'multibyte' => false,
+		'language' => null,
+		'encoding' => null
 	);
 
 /**
@@ -257,10 +258,16 @@ class SluggedBehavior extends ModelBehavior {
 		if (!class_exists('MiCache')) {
 			App::import('Vendor', 'Mi.MiCache');
 		}
-		$lang = MiCache::setting('Site.lang');
-		if (!$lang) {
-			$lang = 'eng';
+		if (!empty($this->settings[$Model->alias]['language'])) {
+			$lang = $this->settings[$Model->alias]['language'];
+		} else {
+			$lang = MiCache::setting('Site.lang');
+			if (!$lang) {
+				$lang = 'eng';
+			}
+			$this->settings[$Model->alias]['language'] = $lang;
 		}
+
 		if (!array_key_exists($lang, $this->stopWords)) {
 			ob_start();
 			if (!App::import('Vendor', 'stop_words/' . $lang, array('file' => "stop_words/$lang.txt"))) {
@@ -337,6 +344,7 @@ class SluggedBehavior extends ModelBehavior {
  */
 	function slug($Model, $string, $tidy = true) {
 		extract ($this->settings[$Model->alias]);
+		$this->_setEncoding($Model, $encoding, $string, !Configure::read());
 
 		if ($replace) {
 			$string = str_replace(array_keys($replace), array_values($replace), $string);
@@ -346,33 +354,37 @@ class SluggedBehavior extends ModelBehavior {
 		} else {
 			$regex = $this->__regex($mode);
 			if ($regex) {
-				$slug = preg_replace('@[' . $regex . ']@Su', $seperator, $string);
+				$slug = $this->_pregReplace('@[' . $regex . ']@Su', $seperator, $string, $encoding);
 			} else {
 				$slug = $string;
 			}
 		}
 		if ($tidy) {
-			$slug = preg_replace('/' . $seperator . '+/', $seperator, $slug);
+			$slug = $this->_pregReplace('/' . $seperator . '+/', $seperator, $slug, $encoding);
 			$slug = trim($slug, $seperator);
 			if ($slug && $mode === 'id' && is_numeric($slug[0])) {
 				$slug = 'x' . $slug;
 			}
 		}
+
 		if (strlen($slug) > $length) {
-			$slug = substr ($slug, $length);
+			$slug = mb_substr ($slug, 0, $length);
+			while ($slug && strlen($slug) > $length) {
+				$slug = mb_substr ($slug, 0, mb_strlen($slug) - 1);
+			}
 		}
 		if ($case) {
 			if ($case === 'up') {
-				$slug = mb_strtoupper($slug, Configure::read('App.encoding'));
+				$slug = mb_strtoupper($slug);
 			} else {
-				$slug = mb_strtolower($slug, Configure::read('App.encoding'));
+				$slug = mb_strtolower($slug);
 			}
 			if (in_array($case, array('title', 'camel'))) {
 				$words = explode($seperator, $slug);
 				foreach ($words as $i => &$word) {
-					$firstChar = mb_substr($word, 0, 1, Configure::read('App.encoding'));
-					$rest = mb_substr($word, 1, mb_strlen($word, Configure::read('App.encoding')) - 1, Configure::read('App.encoding'));
-					$firstCharUp = mb_strtoupper($firstChar, Configure::read('App.encoding'));
+					$firstChar = mb_substr($word, 0, 1);
+					$rest = mb_substr($word, 1, mb_strlen($word) - 1);
+					$firstCharUp = mb_strtoupper($firstChar);
 					$word = $firstCharUp . $rest;
 				}
 				if ($case === 'title') {
@@ -381,11 +393,6 @@ class SluggedBehavior extends ModelBehavior {
 					$slug = implode($words);
 				}
 			}
-		}
-
-		if ($multibyte && function_exists('mb_convert_encoding')) {
-			$encoding = ($multibyte === true) ? Configure::read('App.encoding') : $multibyte;
-			$slug = mb_convert_encoding($slug, $encoding, $encoding);
 		}
 
 		return $slug;
@@ -482,6 +489,55 @@ class SluggedBehavior extends ModelBehavior {
 		}
 		$Model->data = $data;
 		return true;
+	}
+
+/**
+ * Wrapper for preg replace taking care of encoding
+ *
+ * @param mixed $pattern
+ * @param mixed $replace
+ * @param mixed $string
+ * @param string $encoding 'UTF-8'
+ * @return void
+ * @access protected
+ */
+	function _pregReplace($pattern, $replace, $string, $encoding = 'UTF-8') {
+		if ($encoding && $encoding !== 'UTF-8') {
+			$string = mb_convert_encoding($string, 'UTF-8', $encoding);
+		}
+		$return = preg_replace($pattern, $replace, $string);
+		if ($encoding && $encoding !== 'UTF-8') {
+			$slug = mb_convert_encoding($string, $encoding, 'UTF-8');
+		}
+		return $return;
+	}
+
+/**
+ * setEncoding method
+ *
+ * @param mixed $Model
+ * @param mixed $encoding null
+ * @param mixed $string
+ * @param mixed $reset null
+ * @return void
+ * @access protected
+ */
+	function _setEncoding(&$Model, &$encoding = null, &$string, $reset = null) {
+		if (function_exists('mb_internal_encoding')) {
+			$aEncoding = Configure::read('App.encoding');
+			if ($aEncoding) {
+				if (!$encoding) {
+					$encoding = $aEncoding;
+				} elseif ($encoding !== $aEncoding) {
+					$string = mb_convert_encoding($string, $encoding, $aEncoding);
+				}
+			} else {
+				$encoding = $aEncoding;
+			}
+			if ($encoding) {
+				mb_internal_encoding($encoding);
+			}
+		}
 	}
 
 /**
