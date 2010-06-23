@@ -298,7 +298,7 @@ class SluggedBehavior extends ModelBehavior {
 		}
 
 		if (is_array($string)) {
-			$lTerms = array_map('strtolower', $terms);
+			$lTerms = array_map('mb_strtolower', $terms);
 			$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
 			$terms = array_intersect_key($terms, $lTerms);
 		} else {
@@ -330,7 +330,7 @@ class SluggedBehavior extends ModelBehavior {
 					$phrase = implode(' ', $phrase);
 				}
 			} else {
-				$lTerms = array_map('strtolower', $terms);
+				$lTerms = array_map('mb_strtolower', $terms);
 				$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
 				$terms = array_intersect_key($terms, $lTerms);
 			}
