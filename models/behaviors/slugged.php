@@ -181,7 +181,11 @@ class SluggedBehavior extends ModelBehavior {
 			if ($label) {
 				$somethingToDo = false;
 				foreach($label as $field) {
-					if (isset($Model->data[$Model->alias][$field])) {
+					$alias = $Model->alias;
+					if (strpos($field, '.')) {
+						list($alias, $field) = explode('.', $field);
+					}
+					if (isset($Model->data[$alias][$field])) {
 						$somethingToDo = true;
 					}
 				}
@@ -190,11 +194,11 @@ class SluggedBehavior extends ModelBehavior {
 				}
 				$slug = array();
 				foreach($label as $field) {
-					if (isset($Model->data[$Model->alias][$field])) {
-						if (is_array($Model->data[$Model->alias][$field])) {
+					if (isset($Model->data[$alias][$field])) {
+						if (is_array($Model->data[$alias][$field])) {
 							return $this->_multiSlug($Model);
 						}
-						$slug[] = $Model->data[$Model->alias][$field];
+						$slug[] = $Model->data[$alias][$field];
 					} elseif ($Model->id) {
 						$slug[] = $Model->field($field);
 					}
