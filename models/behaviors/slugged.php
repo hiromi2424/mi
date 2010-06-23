@@ -298,6 +298,10 @@ class SluggedBehavior extends ModelBehavior {
 		}
 
 		if (is_array($string)) {
+			$terms = $string;
+			foreach($terms as $i => $term) {
+				$term = trim(preg_replace('@[^\p{Ll}\p{Lm}\p{Lo}\p{Lt}\p{Lu}]@u', $seperator, $term), $seperator);
+			}
 			$lTerms = array_map('mb_strtolower', $terms);
 			$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
 			$terms = array_intersect_key($terms, $lTerms);
@@ -308,7 +312,9 @@ class SluggedBehavior extends ModelBehavior {
 				}
 				return $string;
 			}
+			$string = preg_replace('@[^\p{Ll}\p{Lm}\p{Lo}\p{Lt}\p{Lu}]@u', $seperator, $string);
 			$originalTerms = $terms = array_filter(array_map('trim', explode($seperator, $string)));
+
 			if ($splitOnStopWord) {
 				$terms = $chunk = array();
 				$snippet = '';
@@ -340,9 +346,7 @@ class SluggedBehavior extends ModelBehavior {
 			$terms = array(implode(' ', $originalTerms));
 		}
 		if ($return === 'array') {
-			foreach($terms as &$term) {
-				$term = trim($term, ',.;:?¿¡!');
-			}
+			//sort($terms); // bad idea?
 			return array_unique($terms);
 		}
 		return implode($seperator, $terms);
