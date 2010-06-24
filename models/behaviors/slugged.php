@@ -4,7 +4,7 @@
  *
  * Part based/inspired by the sluggable behavior of Mariano Iglesias
  *
- * PHP versions 4 and 5
+ * PHP version 5
  *
  * Copyright (c) 2008, Andy Dawson
  *
@@ -42,7 +42,7 @@ class SluggedBehavior extends ModelBehavior {
  * @var string 'Slugged'
  * @access public
  */
-	var $name = 'Slugged';
+	public $name = 'Slugged';
 
 /**
  * defaultSettings property
@@ -72,7 +72,7 @@ class SluggedBehavior extends ModelBehavior {
  * @var array
  * @access protected
  */
-	var $_defaultSettings = array(
+	protected $_defaultSettings = array(
 		'label' => null,
 		'slugField' => 'slug',
 		'mode' => 'url',
@@ -88,7 +88,8 @@ class SluggedBehavior extends ModelBehavior {
 			'#' => 'hash',
 		),
 		'run' => 'beforeValidate',
-		'multibyte' => false,
+		'language' => null,
+		'encoding' => null
 	);
 
 /**
@@ -112,17 +113,29 @@ class SluggedBehavior extends ModelBehavior {
  * @access public
  * @return void
  */
-	function setup(&$Model, $config = array()) {
+	public function setup(&$Model, $config = array()) {
+		$this->_defaultSettings['notices'] = Configure::read();
+
 		$this->settings[$Model->alias] = Set::merge($this->_defaultSettings, $config);
 		extract ($this->settings[$Model->alias]);
 		$label = $this->settings[$Model->alias]['label'] = (array)$label;
 		if ($Model->Behaviors->attached('Translate')) {
 			$notices = false;
 		}
-		foreach($label as $field) {
-			if ($notices && !$Model->hasField($field)) {
-				trigger_error('(SluggedBehavior::setup) model ' . $Model->name . ' is missing the field ' . $field . ' specified in the setup.', E_USER_WARNING);
-				$Model->Behaviors->disable($this->name);
+		if ($notices) {
+			foreach($label as $field) {
+				$alias = $Model->alias;
+				if (strpos($field, '.')) {
+					list($alias, $field) = explode('.', $field);
+					if (!$Model->$alias->hasField($field)) {
+						trigger_error('(SluggedBehavior::setup) model ' . $Model->$alias->name . ' is missing the field ' . $field .
+							' (specified in the setup for model ' . $Model->name . ') ', E_USER_WARNING);
+						$Model->Behaviors->disable($this->name);
+					}
+				} elseif (!$Model->hasField($field)) {
+					trigger_error('(SluggedBehavior::setup) model ' . $Model->name . ' is missing the field ' . $field . ' specified in the setup.', E_USER_WARNING);
+					$Model->Behaviors->disable($this->name);
+				}
 			}
 		}
 	}
@@ -134,7 +147,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access public
  */
-	function beforeValidate(&$Model) {
+	public function beforeValidate(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		if ($run !== 'beforeValidate') {
 			return true;
@@ -149,7 +162,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access public
  */
-	function beforeSave(&$Model) {
+	public function beforeSave(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		if ($run !== 'beforeSave') {
 			return true;
@@ -171,7 +184,7 @@ class SluggedBehavior extends ModelBehavior {
  * @access public
  * @return void
  */
-	function generateSlug(&$Model) {
+	public function generateSlug(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		if ($notices && !$Model->hasField($slugField)) {
 			return true;
@@ -180,7 +193,11 @@ class SluggedBehavior extends ModelBehavior {
 			if ($label) {
 				$somethingToDo = false;
 				foreach($label as $field) {
-					if (isset($Model->data[$Model->alias][$field])) {
+					$alias = $Model->alias;
+					if (strpos($field, '.')) {
+						list($alias, $field) = explode('.', $field);
+					}
+					if (isset($Model->data[$alias][$field])) {
 						$somethingToDo = true;
 					}
 				}
@@ -189,11 +206,15 @@ class SluggedBehavior extends ModelBehavior {
 				}
 				$slug = array();
 				foreach($label as $field) {
-					if (isset($Model->data[$Model->alias][$field])) {
-						if (is_array($Model->data[$Model->alias][$field])) {
+					$alias = $Model->alias;
+					if (strpos($field, '.')) {
+						list($alias, $field) = explode('.', $field);
+					}
+					if (isset($Model->data[$alias][$field])) {
+						if (is_array($Model->data[$alias][$field])) {
 							return $this->_multiSlug($Model);
 						}
-						$slug[] = $Model->data[$Model->alias][$field];
+						$slug[] = $Model->data[$alias][$field];
 					} elseif ($Model->id) {
 						$slug[] = $Model->field($field);
 					}
@@ -257,10 +278,16 @@ class SluggedBehavior extends ModelBehavior {
 		if (!class_exists('MiCache')) {
 			App::import('Vendor', 'Mi.MiCache');
 		}
-		$lang = MiCache::setting('Site.lang');
-		if (!$lang) {
-			$lang = 'eng';
+		if (!empty($this->settings[$Model->alias]['language'])) {
+			$lang = $this->settings[$Model->alias]['language'];
+		} else {
+			$lang = MiCache::setting('Site.lang');
+			if (!$lang) {
+				$lang = 'eng';
+			}
+			$this->settings[$Model->alias]['language'] = $lang;
 		}
+
 		if (!array_key_exists($lang, $this->stopWords)) {
 			ob_start();
 			if (!App::import('Vendor', 'stop_words/' . $lang, array('file' => "stop_words/$lang.txt"))) {
@@ -271,7 +298,11 @@ class SluggedBehavior extends ModelBehavior {
 		}
 
 		if (is_array($string)) {
-			$lTerms = array_map('strtolower', $terms);
+			$terms = $string;
+			foreach($terms as $i => $term) {
+				$term = trim(preg_replace('@[^\p{Ll}\p{Lm}\p{Lo}\p{Lt}\p{Lu}]@u', $seperator, $term), $seperator);
+			}
+			$lTerms = array_map('mb_strtolower', $terms);
 			$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
 			$terms = array_intersect_key($terms, $lTerms);
 		} else {
@@ -281,7 +312,9 @@ class SluggedBehavior extends ModelBehavior {
 				}
 				return $string;
 			}
+			$string = preg_replace('@[^\p{Ll}\p{Lm}\p{Lo}\p{Lt}\p{Lu}]@u', $seperator, $string);
 			$originalTerms = $terms = array_filter(array_map('trim', explode($seperator, $string)));
+
 			if ($splitOnStopWord) {
 				$terms = $chunk = array();
 				$snippet = '';
@@ -303,7 +336,7 @@ class SluggedBehavior extends ModelBehavior {
 					$phrase = implode(' ', $phrase);
 				}
 			} else {
-				$lTerms = array_map('strtolower', $terms);
+				$lTerms = array_map('mb_strtolower', $terms);
 				$lTerms = array_diff($lTerms, $this->stopWords[$lang]);
 				$terms = array_intersect_key($terms, $lTerms);
 			}
@@ -313,9 +346,7 @@ class SluggedBehavior extends ModelBehavior {
 			$terms = array(implode(' ', $originalTerms));
 		}
 		if ($return === 'array') {
-			foreach($terms as &$term) {
-				$term = trim($term, ',.;:?¿¡!');
-			}
+			//sort($terms); // bad idea?
 			return array_unique($terms);
 		}
 		return implode($seperator, $terms);
@@ -335,8 +366,9 @@ class SluggedBehavior extends ModelBehavior {
  * @return string a slug
  * @access public
  */
-	function slug($Model, $string, $tidy = true) {
+	public function slug($Model, $string, $tidy = true) {
 		extract ($this->settings[$Model->alias]);
+		$this->_setEncoding($Model, $encoding, $string, !Configure::read());
 
 		if ($replace) {
 			$string = str_replace(array_keys($replace), array_values($replace), $string);
@@ -346,33 +378,37 @@ class SluggedBehavior extends ModelBehavior {
 		} else {
 			$regex = $this->__regex($mode);
 			if ($regex) {
-				$slug = preg_replace('@[' . $regex . ']@Su', $seperator, $string);
+				$slug = $this->_pregReplace('@[' . $regex . ']@Su', $seperator, $string, $encoding);
 			} else {
 				$slug = $string;
 			}
 		}
 		if ($tidy) {
-			$slug = preg_replace('/' . $seperator . '+/', $seperator, $slug);
+			$slug = $this->_pregReplace('/' . $seperator . '+/', $seperator, $slug, $encoding);
 			$slug = trim($slug, $seperator);
 			if ($slug && $mode === 'id' && is_numeric($slug[0])) {
 				$slug = 'x' . $slug;
 			}
 		}
+
 		if (strlen($slug) > $length) {
-			$slug = substr ($slug, $length);
+			$slug = mb_substr ($slug, 0, $length);
+			while ($slug && strlen($slug) > $length) {
+				$slug = mb_substr ($slug, 0, mb_strlen($slug) - 1);
+			}
 		}
 		if ($case) {
 			if ($case === 'up') {
-				$slug = mb_strtoupper($slug, Configure::read('App.encoding'));
+				$slug = mb_strtoupper($slug);
 			} else {
-				$slug = mb_strtolower($slug, Configure::read('App.encoding'));
+				$slug = mb_strtolower($slug);
 			}
 			if (in_array($case, array('title', 'camel'))) {
 				$words = explode($seperator, $slug);
 				foreach ($words as $i => &$word) {
-					$firstChar = mb_substr($word, 0, 1, Configure::read('App.encoding'));
-					$rest = mb_substr($word, 1, mb_strlen($word, Configure::read('App.encoding')) - 1, Configure::read('App.encoding'));
-					$firstCharUp = mb_strtoupper($firstChar, Configure::read('App.encoding'));
+					$firstChar = mb_substr($word, 0, 1);
+					$rest = mb_substr($word, 1, mb_strlen($word) - 1);
+					$firstCharUp = mb_strtoupper($firstChar);
 					$word = $firstCharUp . $rest;
 				}
 				if ($case === 'title') {
@@ -381,11 +417,6 @@ class SluggedBehavior extends ModelBehavior {
 					$slug = implode($words);
 				}
 			}
-		}
-
-		if ($multibyte && function_exists('mb_convert_encoding')) {
-			$encoding = ($multibyte === true) ? Configure::read('App.encoding') : $multibyte;
-			$slug = mb_convert_encoding($slug, $encoding, $encoding);
 		}
 
 		return $slug;
@@ -403,7 +434,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return mixed string (the display name) or false
  * @access public
  */
-	function display(&$Model, $id = null) {
+	public function display(&$Model, $id = null) {
 		if (!$id) {
 			if (!$Model->id) {
 				return false;
@@ -426,7 +457,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return bool true on success false otherwise
  * @access public
  */
-	function resetSlugs(&$Model, $params = array()) {
+	public function resetSlugs(&$Model, $params = array()) {
 		$recursive = -1;
 		extract ($this->settings[$Model->alias]);
 		if ($notices && !$Model->hasField($slugField)) {
@@ -466,7 +497,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return void
  * @access protected
  */
-	function _multiSlug(&$Model) {
+	protected function _multiSlug(&$Model) {
 		extract ($this->settings[$Model->alias]);
 		$data = $Model->data;
 		$field = current($label);
@@ -485,6 +516,55 @@ class SluggedBehavior extends ModelBehavior {
 	}
 
 /**
+ * Wrapper for preg replace taking care of encoding
+ *
+ * @param mixed $pattern
+ * @param mixed $replace
+ * @param mixed $string
+ * @param string $encoding 'UTF-8'
+ * @return void
+ * @access protected
+ */
+	protected function _pregReplace($pattern, $replace, $string, $encoding = 'UTF-8') {
+		if ($encoding && $encoding !== 'UTF-8') {
+			$string = mb_convert_encoding($string, 'UTF-8', $encoding);
+		}
+		$return = preg_replace($pattern, $replace, $string);
+		if ($encoding && $encoding !== 'UTF-8') {
+			$slug = mb_convert_encoding($string, $encoding, 'UTF-8');
+		}
+		return $return;
+	}
+
+/**
+ * setEncoding method
+ *
+ * @param mixed $Model
+ * @param mixed $encoding null
+ * @param mixed $string
+ * @param mixed $reset null
+ * @return void
+ * @access protected
+ */
+	protected function _setEncoding(&$Model, &$encoding = null, &$string, $reset = null) {
+		if (function_exists('mb_internal_encoding')) {
+			$aEncoding = Configure::read('App.encoding');
+			if ($aEncoding) {
+				if (!$encoding) {
+					$encoding = $aEncoding;
+				} elseif ($encoding !== $aEncoding) {
+					$string = mb_convert_encoding($string, $encoding, $aEncoding);
+				}
+			} else {
+				$encoding = $aEncoding;
+			}
+			if ($encoding) {
+				mb_internal_encoding($encoding);
+			}
+		}
+	}
+
+/**
  * regex method
  *
  * Based upon the mode return a partial regex to generate a valid string for the intended use. Note that you
@@ -495,7 +575,7 @@ class SluggedBehavior extends ModelBehavior {
  * @return string a partial regex
  * @access private
  */
-	function __regex($mode) {
+	private function __regex($mode) {
 		$return = '\x00-\x1f\x26\x3c\x7f-\x9f\x{d800}-\x{dfff}\x{fffe}-\x{ffff}';
 		if ($mode === 'display') {
 			return $return;

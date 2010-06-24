@@ -55,6 +55,7 @@ consiguen
 consigues
 contigo
 contra
+cosa
 cual
 cuales
 cualquier
@@ -117,6 +118,7 @@ estais
 estamos
 estan
 estar
+estaremos
 estas
 este
 esto
@@ -199,6 +201,7 @@ nuestras
 nuestro
 nuestros
 nunca
+o
 os
 otra
 otras
@@ -224,6 +227,7 @@ por qué
 porque
 primero
 primero desde
+pueda
 puede
 pueden
 puedo
@@ -249,6 +253,7 @@ segun
 ser
 si
 sí
+sido
 siempre
 siendo
 sin

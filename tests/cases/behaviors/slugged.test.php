@@ -23,6 +23,7 @@
  * @lastModified         $Date$
  * @license              http://www.opensource.org/licenses/mit-license.php The MIT License
  */
+Configure::write('MiSettings.noDb', true);
 
 /**
  * MessageSlugged class
@@ -171,7 +172,7 @@ class SluggedTestCase extends CakeTestCase {
 		$string = $this->Model->removeStopWords('My name is Michael Paine, and I am a nosey neighbour', array(
 			'return' => 'string'
 		));
-		$expected = 'Michael Paine, nosey neighbour';
+		$expected = 'Michael Paine nosey neighbour';
 		$this->assertEqual($expected, $string);
 	}
 
@@ -18056,37 +18057,46 @@ class SluggedTestCase extends CakeTestCase {
 		$this->assertEqual($result, $expects);
 	}
 
-
 /**
  * testTruncateMultibyte method
- * This tests about multi-byte strings was cutted as wrong character format when bytes length is longer than the limitation.
+ *
+ * @return void
+ * @access public
+ */
+/**
+ * testTruncateMultibyte method
+ *
+ * Ensure that the first test doesn't cut a multibyte character The test string is:
+ *  	17 chars
+ *  	51 bytes UTF-8 encoded
+ *  	34 bytes SJIS encoded
+ * Ensure that it'll still work with encodings which aren't UTF-8 - note this file is UTF-8
  *
  * @return void
  * @access public
  */
 	function testTruncateMultibyte() {
+		$testString = 'モデルのデータベースとデータソース';
 		$encoding = Configure::read('App.encoding');
 		Configure::write('App.encoding', 'UTF-8');
 
-		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => false));
-		$result = $this->Model->slug('モデルのデータベースとデータソース');
-		$expects = 'モデルのデータベースとデータソー';
-		$this->assertNotEqual($result, $expects);
-
-		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => true));
+		$this->Model->Behaviors->attach('Slugged', array('length' => 50));
 		$result = $this->Model->slug('モデルのデータベースとデータソース');
 		$expects = 'モデルのデータベースとデータソー';
 		$this->assertEqual($result, $expects);
 
-		Configure::write('App.encoding', 'ascii');
+		Configure::write('App.encoding', 'SJIS');
+		$sjisEncoded = mb_convert_encoding($testString, 'SJIS', 'UTF-8');
 
-		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => true));
-		$result = $this->Model->slug('モデルのデータベースとデータソース');
-		$expects = 'モデルのデータベースとデータソー';
-		$this->assertNotEqual($result, $expects);
+		/*
+		$this->Model->Behaviors->attach('Slugged', array('length' => 33));
+		$result = $this->Model->slug($sjisEncoded);
+		$sjisExpects = mb_convert_encoding('モデルのデータベースとデータソー', 'SJIS', 'UTF-8');
+		$this->assertEqual($result, $sjisExpects);
+		*/
 
-		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'multibyte' => 'UTF-8'));
-		$result = $this->Model->slug('モデルのデータベースとデータソース');
+		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'encoding' => 'UTF-8'));
+		$result = $this->Model->slug($sjisEncoded);
 		$expects = 'モデルのデータベースとデータソー';
 		$this->assertEqual($result, $expects);
 
