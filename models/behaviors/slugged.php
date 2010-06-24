@@ -390,7 +390,6 @@ class SluggedBehavior extends ModelBehavior {
 				$slug = 'x' . $slug;
 			}
 		}
-
 		if (strlen($slug) > $length) {
 			$slug = mb_substr ($slug, 0, $length);
 			while ($slug && strlen($slug) > $length) {
@@ -531,7 +530,7 @@ class SluggedBehavior extends ModelBehavior {
 		}
 		$return = preg_replace($pattern, $replace, $string);
 		if ($encoding && $encoding !== 'UTF-8') {
-			$slug = mb_convert_encoding($string, $encoding, 'UTF-8');
+			$return = mb_convert_encoding($return, $encoding, 'UTF-8');
 		}
 		return $return;
 	}
