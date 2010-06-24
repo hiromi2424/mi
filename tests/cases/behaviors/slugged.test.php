@@ -18088,12 +18088,10 @@ class SluggedTestCase extends CakeTestCase {
 		Configure::write('App.encoding', 'SJIS');
 		$sjisEncoded = mb_convert_encoding($testString, 'SJIS', 'UTF-8');
 
-		/*
 		$this->Model->Behaviors->attach('Slugged', array('length' => 33));
 		$result = $this->Model->slug($sjisEncoded);
 		$sjisExpects = mb_convert_encoding('モデルのデータベースとデータソー', 'SJIS', 'UTF-8');
 		$this->assertEqual($result, $sjisExpects);
-		*/
 
 		$this->Model->Behaviors->attach('Slugged', array('length' => 50, 'encoding' => 'UTF-8'));
 		$result = $this->Model->slug($sjisEncoded);
