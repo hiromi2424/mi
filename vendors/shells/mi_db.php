@@ -143,7 +143,7 @@ class MiDbShell extends Shell {
  */
 	protected $_commands = array(
 		'mysql' => array(
-			'connection' => '--host=:host --port=:port --user=:login --password=:password --default-character-set=:encoding',
+			'connection' => '--host=:host --port=:port --user=:login --password=":password" --default-character-set=:encoding',
 			'connect' => 'mysql :connection :database',
 			'copy' => ':export | :import',
 			'standardOptions' => '--set-charset -e',
