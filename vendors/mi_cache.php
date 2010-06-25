@@ -149,9 +149,6 @@ class MiCache extends Object {
 			return array(MiCache::$setting => MiCache::$settings[MiCache::$setting]);
 		}
 		$_defaults = MiCache::$defaultSettings;
-		if (Configure::read()) {
-			$_defaults['duration'] = 100;
-		}
 		$name = isset($config['name'])?$config['name']:'mi_cache';
 		if (!MiCache::$setting) {
 			MiCache::$setting = $name;
@@ -333,7 +330,7 @@ class MiCache extends Object {
 			$params[1]['miCache'] = 'cacheRequest';
 		}
 		$return = call_user_func_array(array(ClassRegistry::init($name), $func), $params);
-		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
+		MiCache::write($cacheKey, $return, MiCache::$setting);
 		return $return;
 	}
 
@@ -373,10 +370,11 @@ class MiCache extends Object {
  *
  * @param mixed $cacheKey
  * @param mixed $setting null
+ * @param bool $unserialize true
  * @return void
  * @access public
  */
-	public static function read($cacheKey, $setting = null) {
+	public static function read($cacheKey, $setting = null, $unserialize = true) {
 		if (MiCache::$setting === null) {
 			MiCache::config();
 		}
@@ -385,7 +383,7 @@ class MiCache extends Object {
 			$setting = MiCache::$setting;
 		}
 		$return = Cache::read($cacheKey, $setting);
-		if ($return) {
+		if ($return && $unserialize) {
 			return unserialize($return);
 		}
 		return $return;
@@ -453,7 +451,7 @@ class MiCache extends Object {
 
 		$return = Configure::read($id);
 		$cacheKey = MiCache::key(array('MiSettings.Setting', 'data', $id, $aroId));
-		MiCache::write($cacheKey, serialize($return), MiCache::$setting);
+		MiCache::write($cacheKey, $return, MiCache::$setting);
 		return $return;
 	}
 
@@ -562,6 +560,9 @@ class MiFileEngine extends FileEngine {
 
 /**
  * init method
+ *
+ * Note the serialize param refers to the underlying cache engine. MiCache is always
+ * storing serialized strings
  *
  * @param array $settings array()
  * @return void
