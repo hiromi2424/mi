@@ -232,7 +232,7 @@ class MiFormHelper extends FormHelper {
  */
 	function select($fieldName, $options = array(), $selected = null, $attributes = array()) {
 		$ac = array();
-		if (!empty($options['--autocomplete--'])) {
+		if (array_key_exists('--autocomplete--', $options)) {
 			$ac = $options['--autocomplete--'];
 			unset($options['--autocomplete--']);
 		}
