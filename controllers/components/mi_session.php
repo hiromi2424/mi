@@ -84,11 +84,12 @@ class MiSessionComponent extends Overloadable {
  */
 	function beforeRedirect(&$Controller, $url, $status, $exit) {
 		$count = (int)$this->Session->read('MiSession.redirecting');
-		$this->log($count);
 		if ($count > 10) {
 			$this->Session->delete('MiSession.redirecting');
 			if (Configure::read()) {
 				$this->Session->setFlash('A redirect loop was detected');
+			} else {
+				$this->log('A redirect loop was detected - aborting and sending to home');
 			}
 			return '/';
 		}
