@@ -190,8 +190,7 @@ class SwissArmyComponent extends Object {
 
 		if (!empty($C->data['App']['referer']) && $this->_normalizeUrl($C->data['App']['referer']) !== $this->_here) {
 			if ($redirect) {
-				$this->Session->write('history.' . $thread, $this->_history[$thread]);
-				return $C->redirect($C->data['App']['referer']);
+				return $this->_redirect($C->data['App']['referer']);
 			}
 			return $C->data['App']['referer'];
 		}
@@ -206,8 +205,11 @@ class SwissArmyComponent extends Object {
 			if (!$prev) {
 				if (in_array($this->_referer, $this->_history[$thread])) {
 					$prev = $this->_referer;
-				} elseif ($this->_last) {
+				} elseif ($this->_last && $this->_last !== $this->_here) {
 					$prev = $this->_last;
+				} else {
+					end($this->_history[$thread]);
+					$prev = key($this->_history[$thread]);
 				}
 			} elseif (isset($this->_history[$thread][$prev])) {
 				$prev = $this->_history[$thread][$prev];
@@ -227,10 +229,7 @@ class SwissArmyComponent extends Object {
 			if (!empty($noDefault) && $thread !== 'norm') {
 				return $this->back($steps, $prev, $redirect, 'norm');
 			}
-			if (!$C) {
-				$C = new Controller();
-			}
-			$C->redirect($prev);
+			$this->_redirect($prev);
 		}
 		return $prev;
 	}
@@ -336,7 +335,7 @@ class SwissArmyComponent extends Object {
 		}
 		if ($reason == 'auth' && $C->data) {
 			$C->Session->setFlash(__d('mi', 'Invalid form submission', true));
-			$C->redirect('/' . ltrim($C->params['url']['url'], '/'));
+			$this->_redirect('/' . ltrim($C->params['url']['url'], '/'));
 		}
 		$code = 404;
 		if ($reason == 'login') {
@@ -344,7 +343,7 @@ class SwissArmyComponent extends Object {
 		} else {
 			$C->Session->setFlash(__d('mi', 'Permission denied', true));
 		}
-		$C->redirect(null, $code);
+		$this->_redirect(null, $code);
 	}
 
 /**
@@ -408,25 +407,8 @@ class SwissArmyComponent extends Object {
 				$this->settings['usingSubdomains'] = false;
 			}
 		}
-		if ($this->_storeHistory()) {
-			$thread = $this->_browseKey();
-			$this->_history[$thread] = (array)$this->Session->read('history.' . $thread);
-			$this->_here = $this->_normalizeUrl($C->here);
-			$this->_referer = $this->_normalizeUrl($C->referer());
-			$this->_fallBack = $this->_normalizeUrl(array('action' => 'index'));
-			if (isset($this->_history[$thread][$this->_here])) {
-				$this->_last = $this->_history[$thread][$this->_here];
-			} elseif ($this->_referer !== '/') {
-				$this->_last = $this->_referer;
-			} else {
-				$this->_last = $this->_fallBack;
-			}
 
-			if (isset($C->Auth) && $C->action === 'login') {
-				$referer = $this->back(1, $this->Session->read('Auth.redirect'), false);
-				$this->Session->write('Auth.redirect');
-			}
-		}
+		$this->_storeHistory();
 		$this->_autoLayout();
 
 		if ($C->name === 'CakeError') {
@@ -436,7 +418,7 @@ class SwissArmyComponent extends Object {
 					$C->log('Request for ' . $C->here .
 						' generated an error. redirecting to ' . $normalized, LOG_DEBUG);
 				}
-				$C->redirect($this->settings['redirectOnError']);
+				$this->_redirect($this->settings['redirectOnError']);
 			}
 			return;
 		}
@@ -444,17 +426,29 @@ class SwissArmyComponent extends Object {
 	}
 
 /**
- * startup method
+ * initializeBackData method
  *
- * Write a token to the session for use when trying to login via ajax
- *
- * @param mixed $Controller
  * @return void
  * @access public
  */
-	public function startup($C) {
-		if (!empty($C->params['requested'])) {
-			return;
+	function initializeBackData() {
+		$C = $this->Controller;
+		$thread = $this->_browseKey();
+		$this->_history[$thread] = (array)$this->Session->read('history.' . $thread);
+		$this->_here = $this->_normalizeUrl($C->here);
+		$this->_referer = $this->_normalizeUrl($C->referer());
+		$this->_fallBack = $this->_normalizeUrl(array('action' => 'index'));
+		if (isset($this->_history[$thread][$this->_here])) {
+			$this->_last = $this->_history[$thread][$this->_here];
+		} elseif ($this->_referer !== '/') {
+			$this->_last = $this->_referer;
+		} else {
+			$this->_last = $this->_fallBack;
+		}
+
+		if (isset($C->Auth) && $C->action === 'login') {
+			$referer = $this->back(1, $this->Session->read('Auth.redirect'), false);
+			$this->Session->write('Auth.redirect', $referer);
 		}
 	}
 
@@ -875,9 +869,39 @@ class SwissArmyComponent extends Object {
 			return false;
 		}
 		if (method_exists($C, '_storeHistory')) {
-			return $C->_storeHistory();
+			$return = $C->_storeHistory();
+		} else {
+			$return = $this->settings['storeHistory'];
 		}
-		return $this->settings['storeHistory'];
+		if (!$return) {
+			return false;
+		}
+		if (empty($this->_here)) {
+			$this->initializeBackData();
+		}
+		return true;
+	}
+
+/**
+ * redirect method
+ *
+ * @param mixed $url
+ * @param mixed $code null
+ * @param mixed $thread null
+ * @return void
+ * @access protected
+ */
+	protected function _redirect($url, $code = null,  $thread = null) {
+		if (!$thread)  {
+			$thread = $this->_browseKey();
+		}
+		if ($this->_history) {
+			$this->Session->write('history.' . $thread, $this->_history[$thread]);
+		}
+		if (!$this->Controller) {
+			$this->Controller = new Controller();
+		}
+		return $this->Controller->redirect($url, $code);
 	}
 
 /**
@@ -896,7 +920,7 @@ class SwissArmyComponent extends Object {
 		}
 
 		if ($key && is_string($url)) {
-			return $url;
+			return preg_replace('@(?<!:)/+@', '/', $url);
 		}
 		if (class_exists('SeoComponent')) {
 			$url = SeoComponent::url($url);
@@ -904,7 +928,7 @@ class SwissArmyComponent extends Object {
 				if ($this->webroot !== '/') {
 					return preg_replace('@^' . $this->webroot . '@', '/', $url);
 				}
-				return $url;
+				return preg_replace('@(?<!:)/+@', '/', $url);
 			}
 		}
 		if ($key) {
@@ -915,6 +939,6 @@ class SwissArmyComponent extends Object {
 		if ($this->webroot !== '/') {
 			$url = preg_replace('@^' . $this->webroot . '@', '/', $url);
 		}
-		return $url;
+		return preg_replace('@(?<!:)/+@', '/', $url);
 	}
 }
