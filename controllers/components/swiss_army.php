@@ -187,6 +187,7 @@ class SwissArmyComponent extends Object {
 		if (!array_key_exists($thread, $this->__history)) {
 			$this->__history[$thread] = (array)$this->Session->read('history.' . $thread);
 		}
+
 		if (!empty($C->data['App']['referer']) && $this->__normalizeUrl($C->data['App']['referer']) !== $this->__here) {
 			if ($redirect) {
 				$this->Session->write('history.' . $thread, $this->__history[$thread]);
@@ -194,21 +195,33 @@ class SwissArmyComponent extends Object {
 			}
 			return $C->data['App']['referer'];
 		}
+
 		if ($default === null) {
 			$noDefault = true;
 			$default = $this->__fallBack;
 		}
-		$prev = $this->__last;
-		$history = $this->__history[$thread];
 		$normalizedDefault = $this->__normalizeUrl($default, true);
-		while ($steps > 0 && $history) {
-			if (isset($this->__history[$thread][$prev])) {
+		$prev = null;
+		do {
+			if (!$prev) {
+				if (in_array($this->__referer, $this->__history[$thread])) {
+					$prev = $this->__referer;
+				} elseif ($this->__last) {
+					$prev = $this->__last;
+				}
+			} elseif (isset($this->__history[$thread][$prev])) {
 				$prev = $this->__history[$thread][$prev];
+			} else {
+				$steps = 0; // break out
 			}
 			$steps--;
-		}
+		} while ($steps);
+
 		if (!$prev) {
-			$prev = $default;
+			$prev = $this->__last;
+			if (!$prev) {
+				$prev = $default;
+			}
 		}
 		if ($redirect) {
 			if (!empty($noDefault) && $thread !== 'norm') {
@@ -371,7 +384,6 @@ class SwissArmyComponent extends Object {
  *
  * Load default app settings (if configured to do so)
  * Set the referer info if it's not a requestAction call
- * Get a reference to the Auth component, and configure it if necessary
  * Setup the user's language a
  *
  *
@@ -400,33 +412,23 @@ class SwissArmyComponent extends Object {
 			$thread = $this->_browseKey();
 			$this->__history[$thread] = (array)$this->Session->read('history.' . $thread);
 			$this->__here = $this->__normalizeUrl($C->here);
-			if (isset($C->Auth) && $C->action === 'login') {
-				$referer = $this->Session->read('Auth.redirect');
-				if ($referer) {
-					if (empty($this->__history[$thread][$this->__here]) ||
-						$this->__history[$thread][$this->__here] !== $referer) {
-						$this->__history[$thread][$this->__here] = $referer;
-					}
-				}
-			}
-			$this->__referer = $C->referer();
+			$this->__referer = $this->__normalizeUrl($C->referer());
 			$this->__fallBack = $this->__normalizeUrl(array('action' => 'index'));
 			if (isset($this->__history[$thread][$this->__here])) {
 				$this->__last = $this->__history[$thread][$this->__here];
-				if (isset($C->Auth) && $C->action === 'login') {
-					$C->Auth->loginRedirect = $this->__last;
-				}
 			} elseif ($this->__referer !== '/') {
 				$this->__last = $this->__referer;
 			} else {
 				$this->__last = $this->__fallBack;
 			}
+
+			if (isset($C->Auth) && $C->action === 'login') {
+				$referer = $this->back(1, $this->Session->read('Auth.redirect'), false);
+				$this->Session->write('Auth.redirect');
+			}
 		}
 		$this->_autoLayout();
 
-		if (isset($C->Auth)) {
-			$this->Auth =& $C->Auth;
-		}
 		if ($C->name === 'CakeError') {
 			if ($this->settings['redirectOnError']) {
 				if (Configure::read()) {
@@ -453,12 +455,6 @@ class SwissArmyComponent extends Object {
 	public function startup($C) {
 		if (!empty($C->params['requested'])) {
 			return;
-		}
-		if (isset($this->Auth) && !$this->Auth->user() && !in_array('return', $C->params) && $this->settings['authLoginSessionToken']) {
-			if (!$C->data) {
-				$token = Security::hash(String::uuid(), null, true);
-				$this->Session->write('User.login_token', $token);
-			}
 		}
 	}
 
