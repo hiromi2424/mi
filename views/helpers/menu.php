@@ -182,7 +182,7 @@ class MenuHelper extends AppHelper {
 			} else {
 				extract(am(array('section' => $this->_section), $section));
 			}
-		} elseif ($url == null) {
+		} elseif ($url === null) {
 			if ($under) {
 				$options = $under;
 			}
