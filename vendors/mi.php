@@ -638,7 +638,7 @@ class Mi {
 		$folder = Inflector::underscore($controllerName);
 
 		$files = array();
-		foreach ($paths as &$path) {
+		foreach ($paths as $i => &$path) {
 			if (!strpos($path, DS . 'view')) {
 				continue;
 			}
